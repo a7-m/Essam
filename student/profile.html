@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الملف الشخصي - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/student.css">
+</head>
+<body class="bg-secondary">
+    <div class="student-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">الأستاذ عصام</div>
+            <nav class="sidebar-nav">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span>📊</span> لوحة التحكم</a></li>
+                <li class="nav-item"><a href="lessons.html" class="nav-link"><span>📝</span> دروسي</a></li>
+                <li class="nav-item"><a href="homeworks.html" class="nav-link"><span>🏠</span> الواجبات</a></li>
+                <li class="nav-item"><a href="exams.html" class="nav-link"><span>✍️</span> الاختبارات</a></li>
+                <li class="nav-item"><a href="profile.html" class="nav-link active"><span>👤</span> الملف الشخصي</a></li>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-danger btn-block" onclick="authService.signOut()">🚪 تسجيل الخروج</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1>الملف الشخصي</h1>
+                    <p class="text-secondary">تعديل بياناتك الشخصية</p>
+                </div>
+            </header>
+
+            <div class="card p-4" style="max-width: 600px; margin: 0 auto;">
+                <form id="profile-form">
+                    <div class="form-group">
+                        <label class="form-label">الاسم الكامل</label>
+                        <input type="text" name="full_name" id="full_name" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">البريد الإلكتروني (لا يمكن تغييره)</label>
+                        <input type="email" id="email" class="form-control" disabled>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">رقم الهاتف</label>
+                        <input type="text" name="phone" id="phone" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">الصف الدراسي</label>
+                        <select name="grade_level" id="grade_level" class="form-control" required>
+                            <option value="5">الصف الخامس</option>
+                            <option value="6">الصف السادس</option>
+                            <option value="7">الصف الأول الإعدادي</option>
+                            <option value="8">الصف الثاني الإعدادي</option>
+                            <option value="9">الصف الثالث الإعدادي</option>
+                            <option value="10">الصف الأول الثانوي</option>
+                            <option value="11">الصف الثاني الثانوي</option>
+                            <option value="12">الصف الثالث الثانوي</option>
+                        </select>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary btn-block">حفظ التغييرات</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/validation.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+
+    <script>
+        async function initProfile() {
+            try {
+                const user = await authService.requireRole('student', '../login.html');
+                if (!user) return;
+
+                document.getElementById('full_name').value = user.profile.full_name;
+                document.getElementById('email').value = user.email;
+                document.getElementById('phone').value = user.profile.phone || '';
+                document.getElementById('grade_level').value = user.profile.grade_level;
+
+                document.getElementById('profile-form').addEventListener('submit', handleUpdateProfile);
+            } catch (error) {
+                handleError(error, 'initProfile');
+            }
+        }
+
+        async function handleUpdateProfile(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const updates = Object.fromEntries(formData.entries());
+
+            try {
+                await authService.updateProfile({
+                    full_name: updates.full_name,
+                    phone: updates.phone,
+                    grade_level: parseInt(updates.grade_level)
+                });
+                showToast('تم تحديث الملف الشخصي بنجاح', 'success');
+            } catch (error) {
+                handleError(error, 'handleUpdateProfile');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initProfile);
+    </script>
+</body>
+</html>

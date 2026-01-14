@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل الإجابات - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    
+    <style>
+        .review-card {
+            border-left: 5px solid transparent;
+            margin-bottom: 1.5rem;
+        }
+        .review-card.correct { border-left-color: var(--success); }
+        .review-card.incorrect { border-left-color: var(--danger); }
+        
+        .answer-box {
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            margin-top: 0.5rem;
+        }
+        .answer-student { background: var(--bg-tertiary); border: 1px solid var(--border-color); }
+        .answer-correct { background: rgba(34, 197, 94, 0.1); border: 1px solid var(--success); color: #15803d; }
+        
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-secondary">
+    <div class="admin-layout">
+        <aside class="sidebar" id="sidebar-container"></aside>
+
+        <main class="main-content">
+            <header class="page-header d-flex justify-between items-center">
+                <div>
+                    <a href="submissions.html" class="text-secondary small">← العودة للتسليمات</a>
+                    <h1>مراجعة محاولة الحل</h1>
+                </div>
+            </header>
+
+            <!-- Loading -->
+            <div id="loading" class="text-center py-5">
+                <div class="spinner"></div>
+                <p class="mt-2 text-secondary">جاري تحميل تفاصيل الحل...</p>
+            </div>
+
+            <!-- Content -->
+            <div id="main-view" class="d-none">
+                <div class="card p-4 mb-4 bg-primary text-white">
+                    <div class="row items-center justify-between">
+                        <div>
+                            <h2 class="h3 mb-0" id="activity-title">-</h2>
+                            <p class="mb-0 opacity-75" id="student-info">-</p>
+                        </div>
+                        <div class="text-left">
+                            <div class="h2 mb-0" id="result-percentage">0%</div>
+                            <p class="mb-0 small" id="result-score">0 / 0 نقطة</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="questions-list">
+                    <!-- Questions injected here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/admin.service.js"></script>
+
+    <script>
+        async function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+            const type = urlParams.get('type');
+            if (!id || !type) { window.location.href = 'submissions.html'; return; }
+
+            try {
+                await authService.requireRole('admin', '../login.html');
+                renderSidebar();
+                await loadDetails(id, type);
+            } catch (error) {
+                handleError(error, 'attemptDetails.init');
+            }
+        }
+
+        function renderSidebar() {
+            const sidebar = document.getElementById('sidebar-container');
+            sidebar.innerHTML = `
+                <div class="sidebar-logo">الأستاذ عصام</div>
+                <nav class="sidebar-nav">
+                    <li class="nav-item"><a href="dashboard.html" class="nav-link"><span>📊</span> لوحة التحكم</a></li>
+                    <li class="nav-item"><a href="students.html" class="nav-link"><span>👥</span> الطلاب</a></li>
+                    <li class="nav-item"><a href="submissions.html" class="nav-link active"><span>📤</span> التسليمات</a></li>
+                    <li class="nav-item"><a href="subjects.html" class="nav-link"><span>📚</span> المواد والوحدات</a></li>
+                    <li class="nav-item"><a href="lessons.html" class="nav-link"><span>📝</span> الدروس والملفات</a></li>
+                    <li class="nav-item"><a href="homeworks.html" class="nav-link"><span>🏠</span> الواجبات</a></li>
+                    <li class="nav-item"><a href="exams.html" class="nav-link"><span>📝</span> الاختبارات</a></li>
+                    <li class="nav-item"><a href="analytics.html" class="nav-link"><span>📈</span> التحليلات</a></li>
+                    <li class="nav-item"><a href="profile.html" class="nav-link"><span>👤</span> الملف الشخصي</a></li>
+                </nav>
+                <div class="sidebar-footer">
+                    <button class="btn btn-danger btn-block" onclick="authService.signOut()">🚪 تسجيل الخروج</button>
+                </div>
+            `;
+        }
+
+        async function loadDetails(id, type) {
+            try {
+                const data = await adminService.getAttemptDetails(id, type);
+                const a = data.attempt;
+                
+                document.getElementById('activity-title').textContent = data.parentTitle;
+                document.getElementById('student-info').textContent = `${a.student?.full_name} | الصف ${a.student?.grade_level}`;
+                document.getElementById('result-percentage').textContent = `${a.percentage || 0}%`;
+                document.getElementById('result-score').textContent = `${a.score || 0} / ${a.total_points || 0} نقطة`;
+
+                renderQuestions(data.questions, a.answers);
+                
+                document.getElementById('loading').classList.add('d-none');
+                document.getElementById('main-view').classList.remove('d-none');
+            } catch (error) {
+                handleError(error, 'loadDetails');
+            }
+        }
+
+        function renderQuestions(questions, studentAnswers) {
+            const list = document.getElementById('questions-list');
+            list.innerHTML = '';
+
+            questions.forEach((q, i) => {
+                const studentAnswer = studentAnswers[q.id];
+                const isCorrect = String(studentAnswer) === String(q.correct_answer);
+                
+                const card = document.createElement('div');
+                card.className = `card review-card p-4 ${isCorrect ? 'correct' : 'incorrect'}`;
+                
+                card.innerHTML = `
+                    <div class="d-flex justify-between items-start mb-3">
+                        <h3 class="h5 mb-0">سؤال ${i+1}: ${q.question_text}</h3>
+                        <span class="status-badge ${isCorrect ? 'bg-success text-white' : 'bg-danger text-white'}">
+                            ${isCorrect ? 'إجابة صحيحة' : 'إجابة خاطئة'}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="small text-secondary">إجابة الطالب:</label>
+                        <div class="answer-box answer-student">${studentAnswer || '<لم يقم بالحل>'}</div>
+                    </div>
+                    
+                    ${!isCorrect ? `
+                    <div>
+                        <label class="small text-secondary">الإجابة النموذجية:</label>
+                        <div class="answer-box answer-correct">${q.correct_answer}</div>
+                    </div>
+                    ` : ''}
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

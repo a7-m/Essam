@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أحدث التسليمات - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    
+    <style>
+        .activity-item {
+            display: flex;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s;
+        }
+        .activity-item:hover {
+            background: var(--bg-tertiary);
+        }
+        .activity-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+        .icon-exam { background: #fee2e2; color: #dc2626; }
+        .icon-homework { background: #dcfce7; color: #16a34a; }
+        
+        .activity-content { flex: 1; }
+        .activity-time { font-size: 0.8rem; color: var(--text-secondary); }
+        
+        .score-pill {
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .score-success { background: #dcfce7; color: #15803d; }
+        .score-warning { background: #fef9c3; color: #a16207; }
+        .score-danger { background: #fee2e2; color: #b91c1c; }
+    </style>
+</head>
+<body class="bg-secondary">
+    <div class="admin-layout">
+        <aside class="sidebar" id="sidebar-container"></aside>
+
+        <main class="main-content">
+            <header class="page-header d-flex justify-between items-center">
+                <div>
+                    <h1>أحدث التسليمات</h1>
+                    <p class="text-secondary">متابعة نشاط الطلاب في الاختبارات والواجبات لحظياً</p>
+                </div>
+                <button class="btn btn-outline" onclick="loadSubmissions()">🔄 تحديث البيانات</button>
+            </header>
+
+            <!-- Loading -->
+            <div id="loading" class="text-center py-5">
+                <div class="spinner"></div>
+                <p class="mt-2 text-secondary">جاري تحميل أحدث الأنشطة...</p>
+            </div>
+
+            <!-- Content -->
+            <div id="submissions-list" class="card overflow-hidden d-none">
+                <!-- Activities injected here -->
+            </div>
+
+            <div id="empty-state" class="text-center py-5 d-none">
+                <div style="font-size: 3rem">📭</div>
+                <p class="mt-2 text-secondary">لا توجد تسليمات حتى الآن</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/admin.service.js"></script>
+    <script src="../js/components/admin-sidebar.js"></script>
+
+    <script>
+        async function init() {
+            try {
+                await authService.requireRole('admin', '../login.html');
+                renderAdminSidebar('submissions');
+                await loadSubmissions();
+            } catch (error) {
+                handleError(error, 'submissions.init');
+            }
+        }
+
+        async function loadSubmissions() {
+            const list = document.getElementById('submissions-list');
+            const loading = document.getElementById('loading');
+            const empty = document.getElementById('empty-state');
+
+            try {
+                loading.classList.remove('d-none');
+                list.classList.add('d-none');
+                empty.classList.add('d-none');
+
+                const submissions = await adminService.getAllSubmissions();
+                
+                if (submissions.length === 0) {
+                    empty.classList.remove('d-none');
+                    return;
+                }
+
+                list.innerHTML = '';
+                submissions.forEach(item => {
+                    const activity = document.createElement('div');
+                    activity.className = 'activity-item';
+                    
+                    const isExam = item.type === 'exam';
+                    const iconClass = isExam ? 'icon-exam' : 'icon-homework';
+                    const icon = isExam ? '📝' : '🏠';
+                    const score = item.percentage || 0;
+                    const scoreClass = score >= 80 ? 'score-success' : (score >= 50 ? 'score-warning' : 'score-danger');
+                    
+                    activity.innerHTML = `
+                        <div class="activity-icon ${iconClass}">${icon}</div>
+                        <div class="activity-content">
+                            <div class="d-flex justify-between items-center mb-1">
+                                <h4 class="h6 mb-0">${item.profiles?.full_name || 'طالب مجهول'}</h4>
+                                <span class="activity-time">${formatRelativeTime(new Date(item.submitted_at))}</span>
+                            </div>
+                            <p class="small text-secondary mb-2">قام بتسليم ${isExam ? 'اختبار' : 'واجب'}: <span class="text-primary font-bold">${item.activity_title || 'محتوى محذوف'}</span></p>
+                            <div class="d-flex items-center gap-3">
+                                <span class="score-pill ${scoreClass}">${score}%</span>
+                                <span class="small text-secondary">${item.score || 0} من ${item.total_points || 0} نقطة</span>
+                            </div>
+                        </div>
+                        <a href="attempt-details.html?id=${item.id}&type=${item.type}" class="btn btn-xs btn-outline align-self-center">تفاصيل</a>
+                    `;
+                    list.appendChild(activity);
+                });
+
+                list.classList.remove('d-none');
+            } catch (error) {
+                handleError(error, 'loadSubmissions');
+            } finally {
+                loading.classList.add('d-none');
+            }
+        }
+
+        function formatRelativeTime(date) {
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000); // seconds
+
+            if (diff < 60) return 'الآن';
+            if (diff < 3600) return `منذ ${Math.floor(diff / 60)} دقيقة`;
+            if (diff < 86400) return `منذ ${Math.floor(diff / 3600)} ساعة`;
+            return date.toLocaleDateString('ar-EG');
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

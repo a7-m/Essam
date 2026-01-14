@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="عن منصة الأستاذ عصام عبدالمنعم التعليمية - معلومات عن المنصة ومميزاتها"
+    />
+    <title>عن الموقع - منصة الأستاذ عصام عبدالمنعم</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="assets/images/favicon.png" />
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/components.css" />
+
+    <style>
+      .about-hero {
+        padding: var(--spacing-2xl) 0;
+        /* Brand Gradient: Dark Blue Radial */
+        background: radial-gradient(circle at center, var(--primary) 0%, var(--primary-dark) 100%);
+        color: var(--text-inverse);
+        text-align: center;
+        margin-bottom: var(--spacing-2xl);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .about-content {
+        max-width: 800px;
+        margin: 0 auto;
+        line-height: 1.8;
+      }
+
+      .about-section {
+        margin-bottom: var(--spacing-2xl);
+      }
+
+      .about-section h2 {
+        color: var(--primary);
+        border-bottom: 2px solid var(--accent); /* Gold Underline */
+        display: inline-block;
+        padding-bottom: var(--spacing-xs);
+        margin-bottom: var(--spacing-lg);
+      }
+
+      .developer-card {
+        background-color: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        text-align: center;
+        margin-top: var(--spacing-2xl);
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-lg);
+        transition: transform var(--transition-base);
+      }
+      
+      .developer-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--accent);
+      }
+
+      .developer-name {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .developer-role {
+        color: var(--accent);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      
+      /* Card overrides for this page */
+      .feature-card-about {
+        background: var(--bg-secondary);
+        padding: var(--spacing-lg);
+        border-radius: var(--radius-lg);
+        border: 1px solid transparent;
+        transition: all 0.3s ease;
+      }
+      
+      .feature-card-about:hover {
+        background: var(--bg-primary);
+        box-shadow: var(--shadow);
+        border-color: var(--accent);
+      }
+      
+      .feature-card-about h3 { color: var(--primary); font-size: 1.1rem; }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <div class="container navbar-container">
+        <!-- Navbar Brand (Right Side) -->
+        <a href="index.html" class="navbar-brand">
+             <img src="assets/images/شعار الموقع.png" alt="شعار الأستاذ عصام عبدالمنعم">
+        </a>
+
+        <!-- Mobile Toggle -->
+        <button class="navbar-mobile-toggle" id="navbarToggle">☰</button>
+        
+        <!-- Navigation Links & Actions -->
+        <div class="navbar-content">
+          <ul class="navbar-nav" id="navbarNav">
+            <li><a href="index.html" class="nav-link">الرئيسية</a></li>
+            <li><a href="about.html" class="nav-link active" style="color: var(--accent);">عن الموقع</a></li>
+            <li><a href="login.html" class="nav-link">تسجيل الدخول</a></li>
+          </ul>
+
+          <div class="navbar-actions" id="navbarActions">
+              <a href="login.html" class="navbar-user-icon" style="color: var(--accent); font-size: 1.5rem;" title="حسابي">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="about-hero">
+      <div class="container">
+        <h1 style="color: var(--accent);">عن منصة الأستاذ عصام التعليمية</h1>
+        <p style="color: rgba(255,255,255,0.9);">رحلتنا نحو تعليم متميز ومبتكر في اللغة العربية والتربية الإسلامية</p>
+      </div>
+    </section>
+
+    <!-- Content Section -->
+    <div class="container">
+      <div class="about-content">
+        <section class="about-section">
+          <h2>رؤيتنا</h2>
+          <p>
+            تعد منصة الأستاذ عصام عبدالمنعم صرحًا تعليميًا رقميًا يهدف إلى تسهيل المادة العلمية لطلاب اللغة العربية والتربية الإسلامية في سلطنة عُمان. نحن نسعى لتقديم المحتوى بأسلوب عصري يجمع بين الأصالة والتكنولوجيا، لتمكين الطلاب من التفوق الدراسي وتنمية مهاراتهم اللغوية والقيمية.
+          </p>
+        </section>
+
+        <section class="about-section">
+          <h2>مميزات الموقع</h2>
+          <div class="grid grid-2 gap-2 mt-4">
+            <div class="feature-card-about">
+              <h3>دروس تفاعلية</h3>
+              <p>شرح مبسط وواضح لجميع دروس المنهاج مع تدريبات متنوعة.</p>
+            </div>
+            <div class="feature-card-about">
+              <h3>بنك أسئلة ضخم</h3>
+              <p>مجموعة كبيرة من الأسئلة والامتحانات السابقة لمساعدة الطلاب على التدريب.</p>
+            </div>
+            <div class="feature-card-about">
+              <h3>متابعة مستمرة</h3>
+              <p>إمكانية تتبع مستوى الطالب من خلال تقارير دورية دقيقة (للطالب وولي الأمر).</p>
+            </div>
+            <div class="feature-card-about">
+              <h3>سهولة الوصول</h3>
+              <p>المنصة متاحة في أي وقت ومن أي جهاز لتجربة تعليم مميزة.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Developer Credit -->
+        <section class="developer-card">
+          <div class="developer-role">تصميم وبرمجة</div>
+          <div class="developer-name">أحمد عصام عبدالمنعم</div>
+          <p class="text-secondary">تم تطوير هذه المنصة بأحدث التقنيات لخدمة المسيرة التعليمية.</p>
+        </section>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <div class="container">
+        <p>
+          &copy; 2026 أحــمـد عـصــام ـــ منصة الأستاذ عصام عبدالمنعم التعليمية. جميع الحقوق محفوظة.
+        </p>
+        <p class="mt-2 text-sm" style="opacity: 0.7;">
+          <a href="index.html">الرئيسية</a> |
+          <a href="about.html">عن الموقع</a> |
+          <a href="login.html">تسجيل الدخول</a>
+        </p>
+      </div>
+    </footer>
+    
+    <!-- Scripts -->
+    <script src="js/utils/theme.js"></script>
+    <script>
+      // Mobile Navigation Toggle
+      const navbarToggle = document.getElementById('navbarToggle');
+      const navbarNav = document.getElementById('navbarNav');
+
+      if(navbarToggle) {
+          navbarToggle.addEventListener('click', () => {
+            navbarNav.classList.toggle('active');
+            navbarToggle.textContent = navbarNav.classList.contains('active') ? '✕' : '☰';
+          });
+      }
+    </script>
+  </body>
+</html>

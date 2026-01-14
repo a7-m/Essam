@@ -8,48 +8,61 @@
 const ThemeManager = {
   // Theme constants
   THEMES: {
-    LIGHT: 'light',
-    DARK: 'dark',
-    SYSTEM: 'system',
+    LIGHT: "light",
+    DARK: "dark",
+    SYSTEM: "system",
   },
 
   // Storage key
-  STORAGE_KEY: 'theme_preference',
+  STORAGE_KEY: "theme_preference",
 
   /**
    * Initialize theme manager
    */
   init() {
     this.applyTheme(this.getStoredTheme());
-    
+
     // Inject theme toggle button if it doesn't exist
-    if (!document.getElementById('theme-toggle-btn')) {
+    if (!document.getElementById("theme-toggle-btn")) {
       this.injectThemeToggle();
     }
-    
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-      if (this.getStoredTheme() === this.THEMES.SYSTEM) {
-        this.applyTheme(this.THEMES.SYSTEM);
-      }
-    });
 
-    console.log('✅ Theme Manager initialized');
+    // Listen for system theme changes
+    window
+      .matchMedia("(prefers-color-scheme: dark)")
+      .addEventListener("change", (e) => {
+        if (this.getStoredTheme() === this.THEMES.SYSTEM) {
+          this.applyTheme(this.THEMES.SYSTEM);
+        }
+      });
+
+    console.log("✅ Theme Manager initialized");
   },
 
   /**
    * Inject theme toggle button into DOM
+   * @param {string|Element} target - Selector or element to inject into.
+   * Defaults to body if not found.
    */
-  injectThemeToggle() {
-    const btn = document.createElement('button');
-    btn.id = 'theme-toggle-btn';
-    btn.className = 'theme-toggle';
+  injectThemeToggle(target = null) {
+    const btn = document.createElement("button");
+    btn.id = "theme-toggle-btn";
+    btn.className = "theme-toggle";
     btn.onclick = () => this.cycleTheme();
     btn.innerHTML = this.getThemeIcon(this.getStoredTheme());
     btn.title = `الوضع: ${this.getThemeLabel(this.getStoredTheme())}`;
-    
-    // Append to body
-    document.body.appendChild(btn);
+
+    // Look for target or fallback to body
+    const targetEl =
+      typeof target === "string" ? document.querySelector(target) : target;
+
+    if (targetEl) {
+      targetEl.appendChild(btn);
+    } else {
+      // If no target, make it fixed/floating
+      btn.classList.add("theme-toggle-fixed");
+      document.body.appendChild(btn);
+    }
   },
 
   /**
@@ -65,10 +78,10 @@ const ThemeManager = {
    */
   setTheme(theme) {
     if (!Object.values(this.THEMES).includes(theme)) {
-      console.error('Invalid theme:', theme);
+      console.error("Invalid theme:", theme);
       return;
     }
-    
+
     localStorage.setItem(this.STORAGE_KEY, theme);
     this.applyTheme(theme);
     this.updateUI(theme);
@@ -76,21 +89,23 @@ const ThemeManager = {
 
   /**
    * Apply theme to document
-   * @param {string} theme 
+   * @param {string} theme
    */
   applyTheme(theme) {
     const root = document.documentElement;
     let effectiveTheme = theme;
 
     if (theme === this.THEMES.SYSTEM) {
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const systemDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
       effectiveTheme = systemDark ? this.THEMES.DARK : this.THEMES.LIGHT;
     }
 
     if (effectiveTheme === this.THEMES.DARK) {
-      root.setAttribute('data-theme', 'dark');
+      root.setAttribute("data-theme", "dark");
     } else {
-      root.removeAttribute('data-theme');
+      root.removeAttribute("data-theme");
     }
   },
 
@@ -122,22 +137,30 @@ const ThemeManager = {
    */
   getThemeIcon(theme) {
     switch (theme) {
-      case this.THEMES.LIGHT: return '☀️';
-      case this.THEMES.DARK: return '🌙';
-      case this.THEMES.SYSTEM: return '💻';
-      default: return '☀️';
+      case this.THEMES.LIGHT:
+        return "☀️";
+      case this.THEMES.DARK:
+        return "🌙";
+      case this.THEMES.SYSTEM:
+        return "💻";
+      default:
+        return "☀️";
     }
   },
-  
+
   /**
    * get label for current theme (Arabic)
    */
   getThemeLabel(theme) {
-     switch (theme) {
-      case this.THEMES.LIGHT: return 'فاتح';
-      case this.THEMES.DARK: return 'داكن';
-      case this.THEMES.SYSTEM: return 'النظام';
-      default: return 'فاتح';
+    switch (theme) {
+      case this.THEMES.LIGHT:
+        return "فاتح";
+      case this.THEMES.DARK:
+        return "داكن";
+      case this.THEMES.SYSTEM:
+        return "النظام";
+      default:
+        return "فاتح";
     }
   },
 
@@ -145,16 +168,16 @@ const ThemeManager = {
    * Update UI elements (if any exist)
    */
   updateUI(theme) {
-    const btn = document.getElementById('theme-toggle-btn');
+    const btn = document.getElementById("theme-toggle-btn");
     if (btn) {
       btn.innerHTML = this.getThemeIcon(theme);
       btn.title = `الوضع: ${this.getThemeLabel(theme)}`;
     }
-  }
+  },
 };
 
 // Initialize on load
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   ThemeManager.init();
 });
 

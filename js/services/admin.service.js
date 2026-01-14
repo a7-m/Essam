@@ -253,6 +253,17 @@ class AdminService {
     return true;
   }
 
+  async updateHomework(id, updates) {
+    const { data, error } = await supabaseClient
+      .from('homeworks')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   /**
    * QUESTIONS MANAGEMENT (Direct access if needed)
    */
@@ -291,6 +302,49 @@ class AdminService {
     const { error } = await supabaseClient.from('questions').delete().eq('id', id);
     if (error) throw error;
     return true;
+  }
+
+  async syncQuestions(parentId, parentType, questionsData) {
+    try {
+      // 1. Get existing questions
+      const { data: existing, error: getError } = await supabaseClient
+        .from('questions')
+        .select('id')
+        .eq(parentType === 'exam' ? 'exam_id' : 'homework_id', parentId);
+      
+      if (getError) throw getError;
+
+      const existingIds = existing.map(q => q.id);
+      const incomingIds = questionsData.map(q => q.id).filter(id => id);
+
+      // 2. Delete questions not in incoming data
+      const idsToDelete = existingIds.filter(id => !incomingIds.includes(id));
+      if (idsToDelete.length > 0) {
+        const { error: delError } = await supabaseClient
+          .from('questions')
+          .delete()
+          .in('id', idsToDelete);
+        if (delError) throw delError;
+      }
+
+      // 3. Upsert current questions
+      const questionsToUpsert = questionsData.map((q, index) => ({
+        ...q,
+        [parentType === 'exam' ? 'exam_id' : 'homework_id']: parentId,
+        order_index: index
+      }));
+
+      const { error: upsertError } = await supabaseClient
+        .from('questions')
+        .upsert(questionsToUpsert);
+      
+      if (upsertError) throw upsertError;
+
+      return true;
+    } catch (error) {
+      handleError(error, 'syncQuestions');
+      throw error;
+    }
   }
 
   /**
@@ -345,6 +399,17 @@ class AdminService {
     return true;
   }
 
+  async updateExam(id, updates) {
+    const { data, error } = await supabaseClient
+      .from('exams')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   /**
    * DASHBOARD STATS
    */
@@ -366,6 +431,166 @@ class AdminService {
     } catch (error) {
       handleError(error, 'getDashboardStats');
       return { students: 0, subjects: 0, lessons: 0, exams: 0 };
+    }
+  }
+
+  /**
+   * STUDENT MANAGEMENT
+   */
+  async getStudentsWithStats() {
+    try {
+      // 1. Get all students
+      const { data: students, error: studentError } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('role', 'student')
+        .order('full_name', { ascending: true });
+      
+      if (studentError) throw studentError;
+
+      // 2. Get counts of attempts for each student
+      const { data: examCounts, error: examError } = await supabaseClient
+        .from('exam_attempts')
+        .select('student_id');
+      
+      const { data: hwCounts, error: hwError } = await supabaseClient
+        .from('homework_attempts')
+        .select('student_id');
+
+      // Helper to count occurrences
+      const getCounts = (list) => {
+        return (list || []).reduce((acc, curr) => {
+          acc[curr.student_id] = (acc[curr.student_id] || 0) + 1;
+          return acc;
+        }, {});
+      };
+
+      const examStats = getCounts(examCounts);
+      const hwStats = getCounts(hwCounts);
+
+      return students.map(student => ({
+        ...student,
+        exam_count: examStats[student.id] || 0,
+        homework_count: hwStats[student.id] || 0
+      }));
+    } catch (error) {
+      handleError(error, 'getStudentsWithStats');
+      throw error;
+    }
+  }
+
+  async getStudentDetails(studentId) {
+    try {
+      // 1. Profile
+      const { data: profile, error: pError } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', studentId)
+        .single();
+      
+      if (pError) throw pError;
+
+      // 2. Exam Attempts
+      const { data: exams, error: eError } = await supabaseClient
+        .from('exam_attempts')
+        .select('*, exams(title)')
+        .eq('student_id', studentId)
+        .order('submitted_at', { ascending: false });
+
+      // 3. Homework Attempts
+      const { data: homeworks, error: hError } = await supabaseClient
+        .from('homework_attempts')
+        .select('*, homeworks(title)')
+        .eq('student_id', studentId)
+        .order('submitted_at', { ascending: false });
+
+      return {
+        profile,
+        exams: exams || [],
+        homeworks: homeworks || []
+      };
+    } catch (error) {
+      handleError(error, 'getStudentDetails');
+      throw error;
+    }
+  }
+
+  /**
+   * SUBMISSIONS TRACKING
+   */
+  async getAllSubmissions(limit = 50) {
+    try {
+      // 1. Fetch Exam Submissions - specify student_id_fkey relationship with alias
+      const { data: exams, error: eError } = await supabaseClient
+        .from('exam_attempts')
+        .select('*, profiles:profiles!exam_attempts_student_id_fkey(full_name), exams(title)')
+        .not('submitted_at', 'is', null)
+        .order('submitted_at', { ascending: false })
+        .limit(limit);
+
+      if (eError) throw eError;
+
+      // 2. Fetch Homework Submissions
+      const { data: homeworks, error: hError } = await supabaseClient
+        .from('homework_attempts')
+        .select('*, profiles(full_name), homeworks(title)')
+        .not('submitted_at', 'is', null)
+        .order('submitted_at', { ascending: false })
+        .limit(limit);
+
+      if (hError) throw hError;
+
+      // 3. Combine and Sort
+      const combined = [
+        ...exams.map(e => ({ ...e, type: 'exam', activity_title: e.exams?.title })),
+        ...homeworks.map(h => ({ ...h, type: 'homework', activity_title: h.homeworks?.title }))
+      ];
+
+      return combined
+        .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at))
+        .slice(0, limit);
+    } catch (error) {
+      handleError(error, 'getAllSubmissions');
+      throw error;
+    }
+  }
+
+  async getAttemptDetails(attemptId, type) {
+    try {
+      const table = type === 'exam' ? 'exam_attempts' : 'homework_attempts';
+      const parentRelation = type === 'exam' ? 'exams(title, passing_score)' : 'homeworks(title)';
+      const profileJoin = type === 'exam' ? 'profiles!exam_attempts_student_id_fkey(full_name, email, grade_level)' : 'profiles(full_name, email, grade_level)';
+
+      // 1. Get the attempt record
+      const { data: attempt, error: aError } = await supabaseClient
+        .from(table)
+        .select(`*, ${parentRelation}, student: ${profileJoin}`)
+        .eq('id', attemptId)
+        .single();
+      
+      if (aError) throw aError;
+
+      // 2. Get the questions
+      const parentId = type === 'exam' ? attempt.exam_id : attempt.homework_id;
+      const parentField = type === 'exam' ? 'exam_id' : 'homework_id';
+
+      const { data: questions, error: qError } = await supabaseClient
+        .from('questions')
+        .select('*')
+        .eq(parentField, parentId)
+        .order('order_index', { ascending: true });
+      
+      if (qError) throw qError;
+
+      return {
+        attempt,
+        questions,
+        type,
+        parentTitle: type === 'exam' ? attempt.exams?.title : attempt.homeworks?.title
+      };
+    } catch (error) {
+      handleError(error, 'getAttemptDetails');
+      throw error;
     }
   }
 }

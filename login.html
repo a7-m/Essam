@@ -10,12 +10,14 @@
   <link rel="stylesheet" href="css/components.css">
   
   <style>
+    /* Auth Page Specific Styles using Global Variables */
     .auth-page {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      /* Using Brand Blue Gradient */
+      background: radial-gradient(circle at center, var(--primary) 0%, var(--primary-dark) 100%);
       padding: var(--spacing-md);
     }
     
@@ -23,9 +25,10 @@
       width: 100%;
       max-width: 450px;
       background-color: var(--bg-primary);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: var(--radius-xl);
       padding: var(--spacing-2xl);
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     }
     
     .auth-header {
@@ -35,7 +38,7 @@
     
     .auth-header h1 {
       font-size: var(--font-size-2xl);
-      color: var(--text-primary);
+      color: var(--primary);
       margin-bottom: var(--spacing-sm);
     }
     
@@ -52,10 +55,12 @@
     .auth-links a {
       color: var(--primary);
       text-decoration: none;
+      font-weight: 600;
     }
     
     .auth-links a:hover {
       text-decoration: underline;
+      color: var(--accent);
     }
     
     .divider {
@@ -75,10 +80,37 @@
     
     .divider span {
       padding: 0 var(--spacing-md);
+      font-size: var(--font-size-sm);
     }
   </style>
 </head>
-<body>
+  <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <div class="container navbar-container">
+        <!-- Navbar Brand (Right) -->
+        <a href="index.html" class="navbar-brand">
+             <img src="assets/images/شعار الموقع.png" alt="شعار الأستاذ عصام عبدالمنعم">
+        </a>
+
+        <button class="navbar-mobile-toggle" id="navbarToggle">☰</button>
+        
+        <div class="navbar-content">
+          <ul class="navbar-nav" id="navbarNav">
+            <li><a href="index.html" class="nav-link">الرئيسية</a></li>
+            <li><a href="about.html" class="nav-link">عن الموقع</a></li>
+            <li><a href="login.html" class="nav-link active" style="color: var(--accent);">تسجيل الدخول</a></li>
+          </ul>
+
+          <div class="navbar-actions" id="navbarActions">
+              <a href="login.html" class="navbar-user-icon" style="color: var(--accent); font-size: 1.5rem;" title="حسابي">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
   <div class="auth-page">
     <div class="auth-card">
       <div class="auth-header">
@@ -131,7 +163,7 @@
       </form>
       
       <div class="auth-links">
-        <a href="#" id="forgotPassword">نسيت كلمة المرور؟</a>
+        <a href="forgot-password.html">نسيت كلمة المرور؟</a>
       </div>
       
       <div class="divider">
@@ -139,17 +171,23 @@
       </div>
       
       <div class="grid grid-2 gap-2">
-        <a href="register-student.html" class="btn btn-outline">
+        <a href="register-student.html" class="btn btn-outline" style="border-radius: 50px;">
           تسجيل طالب
         </a>
-        <a href="register-parent.html" class="btn btn-outline">
+        <a href="register-parent.html" class="btn btn-outline" style="border-radius: 50px;">
           تسجيل ولي أمر
         </a>
       </div>
       
-      <div class="auth-links mt-3">
+      <div class="auth-links mt-3 text-center">
         <a href="index.html">← العودة للرئيسية</a>
       </div>
+      
+      <footer class="mt-4 text-center">
+        <p class="text-secondary" style="font-size: 0.9rem;">
+          &copy; 2026 أحــمـد عـصــام ـــ منصة الأستاذ عصام عبدالمنعم التعليمية. جميع الحقوق محفوظة.
+        </p>
+      </footer>
     </div>
   </div>
   
@@ -167,101 +205,68 @@
   <script src="js/services/auth.service.js"></script>
   
   <script>
+    // Navbar Toggle Logic
+    const navbarToggle = document.getElementById('navbarToggle');
+    const navbarNav = document.getElementById('navbarNav');
+
+    if(navbarToggle && navbarNav) {
+        navbarToggle.addEventListener('click', () => {
+          navbarNav.classList.toggle('active');
+          navbarToggle.textContent = navbarNav.classList.contains('active') ? '✕' : '☰';
+        });
+    }
+
     // Check if already logged in
     (async () => {
-      const user = await authService.getCurrentUser();
-      if (user) {
-        // Redirect based on role
-        const role = user.profile.role;
-        if (role === 'admin') {
-          window.location.href = '/admin/dashboard.html';
-        } else if (role === 'student') {
-          window.location.href = '/student/dashboard.html';
-        } else if (role === 'parent') {
-          window.location.href = '/parent/dashboard.html';
-        }
-      }
+      try {
+          const user = await authService.getCurrentUser();
+          if (user) {
+            const role = user.profile.role;
+            if (role === 'admin') window.location.replace('admin/dashboard.html');
+            else if (role === 'student') window.location.replace('student/dashboard.html');
+            else if (role === 'parent') window.location.replace('parent/dashboard.html');
+          }
+      } catch(e) { console.log("Auth check skipped or failed", e); }
     })();
     
     // Login form handler
     const loginForm = document.getElementById('loginForm');
     const loginBtn = document.getElementById('loginBtn');
     
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const formData = new FormData(loginForm);
-      const email = formData.get('email').trim();
-      const password = formData.get('password');
-      
-      // Validate
-      const { isValid, errors } = validateForm(
-        { email, password },
-        {
-          email: [validators.email],
-          password: [validators.required],
-        }
-      );
-      
-      if (!isValid) {
-        displayFormErrors(errors);
-        return;
-      }
-      
-      // Clear previous errors
-      displayFormErrors({});
-      
-      // Disable button
-      loginBtn.disabled = true;
-      loginBtn.textContent = 'جارٍ تسجيل الدخول...';
-      
-      try {
-        const user = await authService.signIn(email, password);
-        
-        // Redirect based on role
-        const role = user.profile.role;
-        if (role === 'admin') {
-          window.location.href = '/admin/dashboard.html';
-        } else if (role === 'student') {
-          window.location.href = '/student/dashboard.html';
-        } else if (role === 'parent') {
-          window.location.href = '/parent/dashboard.html';
-        }
-      } catch (error) {
-        // Error already handled by authService
-        loginBtn.disabled = false;
-        loginBtn.textContent = 'تسجيل الدخول';
-      }
-    });
-    
-    // Forgot password handler
-    document.getElementById('forgotPassword').addEventListener('click', async (e) => {
-      e.preventDefault();
-      
-      const email = document.getElementById('email').value.trim();
-      
-      if (!email) {
-        showError('يرجى إدخال بريدك الإلكتروني أولاً');
-        document.getElementById('email').focus();
-        return;
-      }
-      
-      const confirmed = await showConfirm({
-        title: 'إعادة تعيين كلمة المرور',
-        message: `سيتم إرسال رابط إعادة تعيين كلمة المرور إلى: ${email}`,
-        confirmText: 'إرسال',
-        cancelText: 'إلغاء',
-        confirmClass: 'btn-primary',
-      });
-      
-      if (confirmed) {
-        try {
-          await authService.resetPassword(email);
-        } catch (error) {
-          // Error already handled
-        }
-      }
-    });
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const formData = new FormData(loginForm);
+          const email = formData.get('email').trim();
+          const password = formData.get('password');
+          
+          // Basic Client Validation
+          if (!email || !password) {
+             // You would normally show a toast here
+             alert("الرجاء إدخال البريد كلمة المرور");
+             return;
+          }
+          
+          loginBtn.disabled = true;
+          loginBtn.textContent = 'جارٍ تسجيل الدخول...';
+          
+          try {
+            const user = await authService.signIn(email, password);
+            const role = user.profile.role;
+            if (role === 'admin') window.location.replace('admin/dashboard.html');
+            else if (role === 'student') window.location.replace('student/dashboard.html');
+            else if (role === 'parent') window.location.replace('parent/dashboard.html');
+          } catch (error) {
+            // Error handled by service usually, or show toast
+            console.error(error);
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'تسجيل الدخول';
+          }
+        });
+    }
+
+
   </script>
 </body>
 </html>

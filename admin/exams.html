@@ -102,6 +102,7 @@
                             </div>
                         </div>
                         <div class="gap-2 d-flex">
+                            <button class="btn btn-primary btn-sm" onclick="openEditExamModal('${exam.id}')">✏️ تعديل</button>
                             <button class="btn btn-outline" onclick="deleteExam('${exam.id}')">🗑️ حذف</button>
                         </div>
                     </div>
@@ -111,13 +112,38 @@
 
         async function openCreateExamModal() {
             newExamQuestions = []; // Reset
-            const title = 'إنشاء اختبار جديد';
+            renderExamModal('إنشاء اختبار جديد');
+        }
+
+        async function openEditExamModal(examId) {
+            try {
+                const exam = allExams.find(e => e.id === examId);
+                if (!exam) return;
+
+                const questions = await adminService.getQuestions(examId);
+                newExamQuestions = questions.map(q => ({
+                    id: q.id,
+                    question_text: q.question_text,
+                    question_type: q.question_type,
+                    points: q.points,
+                    options: q.options,
+                    correct_answer: q.correct_answer
+                }));
+
+                renderExamModal('تعديل الاختبار', exam);
+            } catch (error) {
+                handleError(error, 'openEditExamModal');
+            }
+        }
+
+        function renderExamModal(title, exam = null) {
             const content = document.createElement('div');
             content.innerHTML = `
                 <form id="exam-form">
+                    ${exam ? `<input type="hidden" name="id" value="${exam.id}">` : ''}
                     <div class="form-group">
                         <label class="form-label">العنوان</label>
-                        <input type="text" name="title" class="form-control" placeholder="مثلاً: اختبار الوحدة الأولى" required>
+                        <input type="text" name="title" class="form-control" value="${exam ? exam.title : ''}" placeholder="مثلاً: اختبار الوحدة الأولى" required>
                     </div>
                     <div class="row">
                         <div class="col">
@@ -125,7 +151,7 @@
                                 <label class="form-label">المادة</label>
                                 <select name="subject_id" class="form-control" required>
                                     <option value="">-- اختر المادة --</option>
-                                    ${subjects.map(s => `<option value="${s.id}">${s.name} (الصف ${s.grade_level})</option>`).join('')}
+                                    ${subjects.map(s => `<option value="${s.id}" ${exam && exam.subject_id === s.id ? 'selected' : ''}>${s.name} (الصف ${s.grade_level})</option>`).join('')}
                                 </select>
                             </div>
                         </div>
@@ -133,7 +159,7 @@
                             <div class="form-group">
                                 <label class="form-label">الصف</label>
                                 <select name="grade_level" class="form-control" required>
-                                    ${[5,6,7,8,9,10,11,12].map(g => `<option value="${g}">الصف ${g}</option>`).join('')}
+                                    ${[5,6,7,8,9,10,11,12].map(g => `<option value="${g}" ${exam && exam.grade_level === g ? 'selected' : ''}>الصف ${g}</option>`).join('')}
                                 </select>
                             </div>
                         </div>
@@ -142,25 +168,25 @@
                         <div class="col">
                             <div class="form-group">
                                 <label class="form-label">المدة (بالدقائق)</label>
-                                <input type="number" name="duration_minutes" class="form-control" value="30" required>
+                                <input type="number" name="duration_minutes" class="form-control" value="${exam ? exam.duration_minutes : '30'}" required>
                             </div>
                         </div>
                         <div class="col">
                             <div class="form-group">
                                 <label class="form-label">أقصى عدد محاولات</label>
-                                <input type="number" name="max_attempts" class="form-control" value="1" required>
+                                <input type="number" name="max_attempts" class="form-control" value="${exam ? exam.max_attempts : '1'}" required>
                             </div>
                         </div>
                         <div class="col">
                             <div class="form-group">
                                 <label class="form-label">درجة النجاح (%)</label>
-                                <input type="number" name="passing_score" class="form-control" value="50" required>
+                                <input type="number" name="passing_score" class="form-control" value="${exam ? exam.passing_score : '50'}" required>
                             </div>
                         </div>
                     </div>
                     
                     <div class="form-check mb-3">
-                        <input type="checkbox" name="is_published" id="is_published">
+                        <input type="checkbox" name="is_published" id="is_published" ${exam && exam.is_published ? 'checked' : ''}>
                         <label for="is_published">نشر الاختبار فوراً</label>
                     </div>
 
@@ -170,17 +196,18 @@
                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="openAddQuestionUI()">➕ إضافة سؤال</button>
                     </div>
                     <div id="added-questions-list" class="p-3 border rounded bg-light" style="min-height: 100px;">
-                        <p class="text-secondary text-center">لم تتم إضافة أسئلة بعد</p>
+                        ${newExamQuestions.length === 0 ? '<p class="text-secondary text-center">لم تتم إضافة أسئلة بعد</p>' : ''}
                     </div>
                 </form>
             `;
 
             const footer = `
                 <button class="btn btn-secondary" onclick="closeModal(this.closest('.modal-wrapper'))">إلغاء</button>
-                <button class="btn btn-primary" onclick="handleCreateExam()">حفظ وإنشاء</button>
+                <button class="btn btn-primary" onclick="handleSaveExam()">${exam ? 'حفظ التغييرات' : 'حفظ وإنشاء'}</button>
             `;
 
             showModal({ title, content, footer, size: 'large' });
+            if (newExamQuestions.length > 0) renderAddedQuestions();
         }
 
         function openAddQuestionUI() {
@@ -309,7 +336,7 @@
             renderAddedQuestions();
         }
 
-        async function handleCreateExam() {
+        async function handleSaveExam() {
             const form = document.getElementById('exam-form');
             if (!form.checkValidity()) {
                 form.reportValidity();
@@ -318,6 +345,7 @@
             
             const formData = new FormData(form);
             const rawData = Object.fromEntries(formData.entries());
+            const isEdit = !!rawData.id;
             
             if (newExamQuestions.length === 0) {
                 showToast('يجب إضافة سؤال واحد على الأقل', 'error');
@@ -336,13 +364,18 @@
             };
 
             try {
-                // Pass questions array directly
-                await adminService.createExam(examData, newExamQuestions);
-                showToast('تم إنشاء الاختبار بنجاح', 'success');
+                if (isEdit) {
+                    await adminService.updateExam(rawData.id, examData);
+                    await adminService.syncQuestions(rawData.id, 'exam', newExamQuestions);
+                    showToast('تم تحديث الاختبار بنجاح', 'success');
+                } else {
+                    await adminService.createExam(examData, newExamQuestions);
+                    showToast('تم إنشاء الاختبار بنجاح', 'success');
+                }
                 closeModal(form.closest('.modal-wrapper'));
                 loadExams();
             } catch (error) {
-                handleError(error, 'handleCreateExam');
+                handleError(error, isEdit ? 'handleUpdateExam' : 'handleCreateExam');
             }
         }
 

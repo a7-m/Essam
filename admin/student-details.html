@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل الطالب - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    
+    <style>
+        .profile-header {
+            background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: var(--radius-lg);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+        .tab-btn {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .score-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-sm);
+            font-weight: bold;
+        }
+        .score-high { background: #dcfce7; color: #166534; }
+        .score-mid { background: #fef9c3; color: #854d0e; }
+        .score-low { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body class="bg-secondary">
+    <div class="admin-layout">
+        <aside class="sidebar" id="sidebar-container"></aside>
+
+        <main class="main-content">
+            <header class="page-header d-flex justify-between items-center">
+                <div>
+                    <a href="students.html" class="text-secondary small">← العودة لقائمة الطلاب</a>
+                    <h1>بيانات الطالب</h1>
+                </div>
+                <div id="action-buttons"></div>
+            </header>
+
+            <!-- Loading -->
+            <div id="loading" class="text-center py-5">
+                <div class="spinner"></div>
+                <p class="mt-2 text-secondary">جاري تحميل بيانات الطالب...</p>
+            </div>
+
+            <!-- Content -->
+            <div id="main-view" class="d-none">
+                <div class="profile-header" id="profile-info">
+                    <!-- Profile info injected here -->
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('exams')">📝 الاختبارات</button>
+                    <button class="tab-btn" onclick="switchTab('homeworks')">🏠 الواجبات</button>
+                    <button class="tab-btn" onclick="switchTab('info')">📋 البيانات الكاملة</button>
+                </div>
+
+                <!-- Exams Tab -->
+                <div id="tab-exams" class="tab-content active">
+                    <div class="card overflow-hidden">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>الاختبار</th>
+                                    <th>التاريخ</th>
+                                    <th>الدرجة</th>
+                                    <th>النسبة</th>
+                                    <th>الحالة</th>
+                                    <th>التفاصيل</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exams-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Homeworks Tab -->
+                <div id="tab-homeworks" class="tab-content">
+                    <div class="card overflow-hidden">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>الواجب</th>
+                                    <th>التاريخ</th>
+                                    <th>الدرجة</th>
+                                    <th>النسبة</th>
+                                    <th>التقييم الآلي</th>
+                                    <th>التفاصيل</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hw-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Full Info Tab -->
+                <div id="tab-info" class="tab-content">
+                    <div class="grid grid-2 gap-4">
+                        <div class="card p-4">
+                            <h3 class="h5 mb-4 border-bottom pb-2">معلومات التواصل</h3>
+                            <div class="mb-3">
+                                <label class="small text-secondary d-block">الاسم بالكامل</label>
+                                <div class="font-bold" id="info-name">-</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-secondary d-block">البريد الإلكتروني</label>
+                                <div class="font-bold" id="info-email">-</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-secondary d-block">رقم الهاتف</label>
+                                <div class="font-bold" id="info-phone">-</div>
+                            </div>
+                        </div>
+                        <div class="card p-4">
+                            <h3 class="h5 mb-4 border-bottom pb-2">معلومات الدراسة والوالدين</h3>
+                            <div class="mb-3">
+                                <label class="small text-secondary d-block">الصف الدراسي</label>
+                                <div class="font-bold" id="info-grade">-</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-secondary d-block">تاريخ التسجيل</label>
+                                <div class="font-bold" id="info-joined">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/admin.service.js"></script>
+    <script src="../js/components/admin-sidebar.js"></script>
+
+    <script>
+        let studentData = null;
+
+        async function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+            if (!id) { window.location.href = 'students.html'; return; }
+
+            try {
+                await authService.requireRole('admin', '../login.html');
+                renderAdminSidebar('students');
+                await loadStudentData(id);
+            } catch (error) {
+                handleError(error, 'studentDetails.init');
+            }
+        }
+
+        async function loadStudentData(id) {
+            try {
+                studentData = await adminService.getStudentDetails(id);
+                renderProfile();
+                renderExams();
+                renderHomeworks();
+                renderInfo();
+                
+                document.getElementById('loading').classList.add('d-none');
+                document.getElementById('main-view').classList.remove('d-none');
+            } catch (error) {
+                handleError(error, 'loadStudentData');
+            }
+        }
+
+        function renderProfile() {
+            const p = studentData.profile;
+            const initial = p.full_name ? p.full_name.charAt(0).toUpperCase() : '?';
+            document.getElementById('profile-info').innerHTML = `
+                <div class="profile-avatar">${initial}</div>
+                <div>
+                    <h2 class="h1 mb-1">${p.full_name || 'طالب جديد'}</h2>
+                    <p class="mb-0 opacity-75">الصف الدراسي: ${p.grade_level || '--'} | ${p.email}</p>
+                </div>
+            `;
+        }
+
+        function renderExams() {
+            const tbody = document.getElementById('exams-table-body');
+            tbody.innerHTML = studentData.exams.length ? '' : '<tr><td colspan="5" class="text-center py-4">لا توجد محاولات اختبار</td></tr>';
+            
+            studentData.exams.forEach(attempt => {
+                const scoreClass = attempt.percentage >= 80 ? 'score-high' : (attempt.percentage >= 50 ? 'score-mid' : 'score-low');
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${attempt.exams?.title || 'اختبار محذوف'}</strong></td>
+                    <td class="small">${new Date(attempt.submitted_at).toLocaleDateString('ar-EG')}</td>
+                    <td>${attempt.score} / ${attempt.total_points}</td>
+                    <td><span class="score-badge ${scoreClass}">${attempt.percentage}%</span></td>
+                    <td>${attempt.passed ? '✅ ناجح' : '❌ راسب'}</td>
+                    <td><a href="attempt-details.html?id=${attempt.id}&type=exam" class="btn btn-xs btn-outline">👁️ عرض</a></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderHomeworks() {
+            const tbody = document.getElementById('hw-table-body');
+            tbody.innerHTML = studentData.homeworks.length ? '' : '<tr><td colspan="5" class="text-center py-4">لا توجد تسليمات واجبات</td></tr>';
+            
+            studentData.homeworks.forEach(attempt => {
+                const scoreClass = attempt.percentage >= 80 ? 'score-high' : (attempt.percentage >= 50 ? 'score-mid' : 'score-low');
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${attempt.homeworks?.title || 'واجب محذوف'}</strong></td>
+                    <td class="small">${new Date(attempt.submitted_at).toLocaleDateString('ar-EG')}</td>
+                    <td>${attempt.score || 0} / ${attempt.total_points || 0}</td>
+                    <td><span class="score-badge ${scoreClass}">${attempt.percentage || 0}%</span></td>
+                    <td>${attempt.is_graded ? '✨ تم التصحيح' : '⏳ جاري'}</td>
+                    <td><a href="attempt-details.html?id=${attempt.id}&type=homework" class="btn btn-xs btn-outline">👁️ عرض</a></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderInfo() {
+            const p = studentData.profile;
+            document.getElementById('info-name').textContent = p.full_name || '--';
+            document.getElementById('info-email').textContent = p.email || '--';
+            document.getElementById('info-phone').textContent = p.phone || '--';
+            document.getElementById('info-grade').textContent = `الصف ${p.grade_level || '--'}`;
+            document.getElementById('info-joined').textContent = new Date(p.created_at).toLocaleDateString('ar-EG');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -18,41 +18,88 @@
     <link rel="stylesheet" href="css/components.css" />
 
     <style>
+      /* Page-Specific Styles for Hero Section */
+      /* Note: Global variables from main.css are used here */
+      
       .hero {
-        min-height: 80vh;
+        min-height: 100vh;
         display: flex;
         align-items: center;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        justify-content: center;
+        /* Using Dark Blue gradient as base */
+        background: radial-gradient(circle at center, var(--primary) 0%, var(--primary-dark) 100%);
+        color: var(--text-inverse);
         text-align: center;
         padding: var(--spacing-2xl) var(--spacing-md);
+        position: relative;
+        overflow: hidden;
       }
 
-      .hero-content h1 {
-        font-size: 3rem;
-        margin-bottom: var(--spacing-lg);
-        color: white;
+      .hero-content {
+        position: relative;
+        z-index: 1;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding-top: 80px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
 
-      .hero-content p {
-        font-size: 1.25rem;
+      .hero-main-image {
+        max-width: 100%;
+        height: auto;
+        width: 100%; 
+        max-width: 800px;
         margin-bottom: var(--spacing-xl);
-        opacity: 0.95;
+        border-radius: var(--radius-lg);
+        box-shadow: 0 20px 50px rgba(0,0,0,0.3); /* Enhanced shadow for depth */
       }
 
       .hero-buttons {
         display: flex;
-        gap: var(--spacing-md);
+        gap: var(--spacing-lg);
         justify-content: center;
         flex-wrap: wrap;
+        width: 100%;
       }
 
-      .hero-buttons .btn {
-        min-width: 150px;
+      /* Hero Specific Button Overrides */
+      .btn-hero {
+        padding: 12px 35px;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        min-width: 180px;
+      }
+
+      .btn-hero-primary {
+        background-color: var(--accent); /* Gold Background */
+        color: var(--primary);          /* Blue Text */
+        border: 2px solid var(--accent);
+      }
+
+      .btn-hero-primary:hover {
+        background-color: var(--accent-light);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(197, 160, 89, 0.4);
+      }
+
+      .btn-hero-secondary {
+        background-color: transparent;
+        color: white;
+        border: 2px solid white;
+      }
+
+      .btn-hero-secondary:hover {
+        background-color: white;
+        color: var(--primary);
+        transform: translateY(-3px);
       }
 
       .features {
         padding: var(--spacing-2xl) 0;
+        background-color: var(--bg-primary);
       }
 
       .features-grid {
@@ -66,12 +113,15 @@
         text-align: center;
         padding: var(--spacing-xl);
         background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
         border-radius: var(--radius-lg);
-        transition: transform var(--transition-base);
+        transition: transform var(--transition-base), box-shadow var(--transition-base);
       }
 
       .feature-card:hover {
-        transform: translateY(-5px);
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        border-color: var(--accent);
       }
 
       .feature-icon {
@@ -80,8 +130,9 @@
       }
 
       .feature-card h3 {
-        color: var(--text-primary);
+        color: var(--primary);
         margin-bottom: var(--spacing-sm);
+        font-weight: 700;
       }
 
       .feature-card p {
@@ -102,66 +153,79 @@
       }
 
       .stat-number {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: var(--primary);
-        margin-bottom: var(--spacing-sm);
+        font-size: 3rem;
+        font-weight: 800;
+        color: var(--accent); /* Gold Numbers */
+        margin-bottom: var(--spacing-xs);
+        line-height: 1;
       }
 
       .stat-label {
         font-size: 1.1rem;
-        color: var(--text-secondary);
-      }
-
-      footer {
-        background-color: var(--bg-tertiary);
-        padding: var(--spacing-2xl) 0;
-        text-align: center;
-        color: var(--text-secondary);
+        color: var(--primary);
+        font-weight: 600;
       }
 
       @media (max-width: 768px) {
-        .hero-content h1 {
-          font-size: 2rem;
+        .hero-buttons {
+          flex-direction: column;
+          align-items: center;
+          gap: var(--spacing-md);
         }
 
-        .hero-content p {
-          font-size: 1rem;
+        .btn-hero {
+          width: 100%;
+          max-width: 280px;
         }
       }
     </style>
   </head>
   <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <div class="container navbar-container">
+        <!-- Navbar Brand with Logo (Right Side in RTL) -->
+        <a href="index.html" class="navbar-brand">
+             <img src="assets/images/شعار الموقع.png" alt="شعار الأستاذ عصام عبدالمنعم">
+        </a>
+
+        <!-- Mobile Toggle -->
+        <button class="navbar-mobile-toggle" id="navbarToggle">☰</button>
+        
+        <!-- Navigation Links (Center/Left Side) -->
+        <div class="navbar-content">
+          <ul class="navbar-nav" id="navbarNav">
+            <li><a href="index.html" class="nav-link active">الرئيسية</a></li>
+            <li><a href="about.html" class="nav-link">عن الموقع</a></li>
+            <li><a href="login.html" class="nav-link">تسجيل الدخول</a></li>
+          </ul>
+
+          <!-- Navbar Actions (Left Side) -->
+          <div class="navbar-actions" id="navbarActions">
+              <a href="login.html" class="navbar-user-icon" style="color: var(--accent); font-size: 1.5rem;" title="حسابي">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              </a>
+              <!-- Theme Toggle will be injected here -->
+          </div>
+        </div>
+      </div>
+    </nav>
+
     <!-- Hero Section -->
     <section class="hero">
       <div class="container">
         <div class="hero-content">
-          <h1>منصة الأستاذ عصام عبدالمنعم التعليمية</h1>
-          <p>
-            معلم اللغة العربية والتربية الإسلامية<br />
-            للصفوف 5 – 6 – 7 – 8 – 9 – 10 – 11 – 12<br />
-            وفق منهج سلطنة عُمان
-          </p>
+          <!-- Hero Main Image -->
+          <img src="assets/images/hero section.png" alt="القسم الرئيسي" class="hero-main-image">
+          
           <div class="hero-buttons">
-            <a
-              href="login.html"
-              class="btn btn-lg"
-              style="background-color: white; color: #667eea"
-            >
+            <a href="login.html" class="btn-hero btn-hero-primary">
               تسجيل الدخول
             </a>
-            <a
-              href="register-student.html"
-              class="btn btn-lg btn-outline"
-              style="border-color: white; color: white"
-            >
+            <a href="register-student.html" class="btn-hero btn-hero-secondary">
               إنشاء حساب طالب
             </a>
-            <a
-              href="register-parent.html"
-              class="btn btn-lg btn-outline"
-              style="border-color: white; color: white"
-            >
+            <a href="register-parent.html" class="btn-hero btn-hero-secondary">
               إنشاء حساب ولي أمر
             </a>
           </div>
@@ -172,7 +236,7 @@
     <!-- Features Section -->
     <section class="features">
       <div class="container">
-        <h2 class="text-center">مميزات المنصة</h2>
+        <h2 class="text-center" style="color: var(--primary); margin-bottom: var(--spacing-xl);">مميزات المنصة</h2>
         <div class="features-grid">
           <div class="feature-card">
             <div class="feature-icon">📚</div>
@@ -216,7 +280,7 @@
     <!-- Stats Section -->
     <section class="stats">
       <div class="container">
-        <h2 class="text-center mb-4">إحصائيات المنصة</h2>
+        <h2 class="text-center mb-4" style="color: var(--primary);">إحصائيات المنصة</h2>
         <div class="stats-grid">
           <div>
             <div class="stat-number">8</div>
@@ -242,9 +306,11 @@
     <footer>
       <div class="container">
         <p>
-          &copy; 2026 منصة الأستاذ عصام عبدالمنعم التعليمية. جميع الحقوق محفوظة.
+          &copy; 2026 أحــمـد عـصــام ـــ منصة الأستاذ عصام عبدالمنعم التعليمية. جميع الحقوق محفوظة.
         </p>
         <p class="mt-2">
+          <a href="index.html">الرئيسية</a> |
+          <a href="about.html">عن الموقع</a> |
           <a href="login.html">تسجيل الدخول</a> |
           <a href="register-student.html">تسجيل طالب</a> |
           <a href="register-parent.html">تسجيل ولي أمر</a>
@@ -262,5 +328,53 @@
     <script src="js/utils/helpers.js"></script>
     <script src="js/utils/theme.js"></script>
     <script src="js/components/toast.js"></script>
+    <script src="js/services/auth.service.js"></script>
+    <script>
+      // Mobile Navigation Toggle
+      const navbarToggle = document.getElementById('navbarToggle');
+      const navbarNav = document.getElementById('navbarNav');
+
+      navbarToggle.addEventListener('click', () => {
+        navbarNav.classList.toggle('active');
+        navbarToggle.textContent = navbarNav.classList.contains('active') ? '✕' : '☰';
+      });
+
+      // Authentication UI Logic
+      async function updateAuthUI() {
+        try {
+          const user = await authService.getCurrentUser();
+          if (user) {
+            // 1. Update Navbar Links
+            const loginLink = document.querySelector('a[href="login.html"]');
+            if (loginLink) {
+              const profilePath = `${user.profile.role}/dashboard.html`;
+              loginLink.href = profilePath;
+              loginLink.textContent = 'لوحة التحكم';
+            }
+
+            // 2. Hide Hero Buttons and replace with Go to Dash
+            const heroButtons = document.querySelector('.hero-buttons');
+            if (heroButtons) {
+              const profilePath = `${user.profile.role}/dashboard.html`;
+              heroButtons.innerHTML = `
+                <a href="${profilePath}" class="btn-hero btn-hero-primary">
+                  الذهاب إلى لوحة التحكم
+                </a>
+              `;
+            }
+
+            // 3. Update User Icon link
+            const userIcon = document.querySelector('.navbar-user-icon');
+            if (userIcon) {
+              userIcon.href = `${user.profile.role}/dashboard.html`;
+            }
+          }
+        } catch (error) {
+          console.error('Auth UI update failed:', error);
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', updateAuthUI);
+    </script>
   </body>
 </html>

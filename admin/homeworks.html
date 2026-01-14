@@ -101,6 +101,7 @@
                             </div>
                         </div>
                         <div class="gap-2 d-flex">
+                            <button class="btn btn-primary btn-sm" onclick="openEditHomeworkModal('${hw.id}')">✏️ تعديل</button>
                             <button class="btn btn-outline" onclick="deleteHomework('${hw.id}')">🗑️ حذف</button>
                         </div>
                     </div>
@@ -110,17 +111,42 @@
 
         async function openCreateHomeworkModal() {
             newHomeworkQuestions = [];
-            const title = 'إضافة واجب جديد';
+            renderHomeworkModal('إضافة واجب جديد');
+        }
+
+        async function openEditHomeworkModal(homeworkId) {
+            try {
+                const homework = allHomeworks.find(h => h.id === homeworkId);
+                if (!homework) return;
+
+                const questions = await adminService.getQuestions(null, homeworkId);
+                newHomeworkQuestions = questions.map(q => ({
+                    id: q.id,
+                    question_text: q.question_text,
+                    question_type: q.question_type,
+                    points: q.points,
+                    options: q.options,
+                    correct_answer: q.correct_answer
+                }));
+
+                renderHomeworkModal('تعديل الواجب', homework);
+            } catch (error) {
+                handleError(error, 'openEditHomeworkModal');
+            }
+        }
+
+        function renderHomeworkModal(title, homework = null) {
             const content = document.createElement('div');
             content.innerHTML = `
                 <form id="homework-form">
+                    ${homework ? `<input type="hidden" name="id" value="${homework.id}">` : ''}
                     <div class="form-group">
                         <label class="form-label">العنوان</label>
-                        <input type="text" name="title" class="form-control" placeholder="مثلاً: واجب الوحدة الأولى" required>
+                        <input type="text" name="title" class="form-control" value="${homework ? homework.title : ''}" placeholder="مثلاً: واجب الوحدة الأولى" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">الوصف (اختياري)</label>
-                        <textarea name="description" class="form-control"></textarea>
+                        <textarea name="description" class="form-control">${homework ? homework.description || '' : ''}</textarea>
                     </div>
                     <div class="row">
                         <div class="col">
@@ -128,7 +154,7 @@
                                 <label class="form-label">المادة</label>
                                 <select name="subject_id" class="form-control" onchange="updateUnits(this.value)" required>
                                     <option value="">-- اختر المادة --</option>
-                                    ${subjects.map(s => `<option value="${s.id}">${s.name} (الصف ${s.grade_level})</option>`).join('')}
+                                    ${subjects.map(s => `<option value="${s.id}" ${homework && homework.subject_id === s.id ? 'selected' : ''}>${s.name} (الصف ${s.grade_level})</option>`).join('')}
                                 </select>
                             </div>
                         </div>
@@ -146,14 +172,14 @@
                              <div class="form-group">
                                 <label class="form-label">الصف</label>
                                 <select name="grade_level" class="form-control" required>
-                                    ${[5,6,7,8,9,10,11,12].map(g => `<option value="${g}">الصف ${g}</option>`).join('')}
+                                    ${[5,6,7,8,9,10,11,12].map(g => `<option value="${g}" ${homework && homework.grade_level === g ? 'selected' : ''}>الصف ${g}</option>`).join('')}
                                 </select>
                             </div>
                         </div>
                     </div>
                     
                     <div class="form-check mb-3">
-                        <input type="checkbox" name="is_published" id="is_published">
+                        <input type="checkbox" name="is_published" id="is_published" ${homework && homework.is_published ? 'checked' : ''}>
                         <label for="is_published">نشر الواجب فوراً</label>
                     </div>
 
@@ -163,20 +189,22 @@
                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="openAddQuestionUI()">➕ إضافة سؤال</button>
                     </div>
                     <div id="added-questions-list" class="p-3 border rounded bg-light" style="min-height: 100px;">
-                        <p class="text-secondary text-center">لم تتم إضافة أسئلة بعد</p>
+                        ${newHomeworkQuestions.length === 0 ? '<p class="text-secondary text-center">لم تتم إضافة أسئلة بعد</p>' : ''}
                     </div>
                 </form>
             `;
 
             const footer = `
                 <button class="btn btn-secondary" onclick="closeModal(this.closest('.modal-wrapper'))">إلغاء</button>
-                <button class="btn btn-primary" onclick="handleCreateHomework()">حفظ وإنشاء</button>
+                <button class="btn btn-primary" onclick="handleSaveHomework()">${homework ? 'حفظ التغييرات' : 'حفظ وإنشاء'}</button>
             `;
 
             showModal({ title, content, footer, size: 'large' });
+            if (homework) updateUnits(homework.subject_id, homework.unit_id);
+            if (newHomeworkQuestions.length > 0) renderAddedQuestions();
         }
 
-        async function updateUnits(subjectId) {
+        async function updateUnits(subjectId, selectedUnitId = null) {
             const unitSelect = document.getElementById('modal_unit_id');
             if (!subjectId) {
                 unitSelect.innerHTML = '<option value="">-- عام للمادة --</option>';
@@ -185,7 +213,7 @@
             try {
                 const units = await adminService.getUnits(subjectId);
                 unitSelect.innerHTML = '<option value="">-- عام للمادة --</option>' + 
-                    units.map(u => `<option value="${u.id}">${u.title}</option>`).join('');
+                    units.map(u => `<option value="${u.id}" ${selectedUnitId === u.id ? 'selected' : ''}>${u.title}</option>`).join('');
             } catch(e) { console.error(e); }
         }
 
@@ -309,7 +337,7 @@
             renderAddedQuestions();
         }
 
-        async function handleCreateHomework() {
+        async function handleSaveHomework() {
             const form = document.getElementById('homework-form');
             if (!form.checkValidity()) {
                 form.reportValidity();
@@ -318,13 +346,14 @@
             
             const formData = new FormData(form);
             const rawData = Object.fromEntries(formData.entries());
+            const isEdit = !!rawData.id;
             
             if (newHomeworkQuestions.length === 0) {
                 showToast('يجب إضافة سؤال واحد على الأقل', 'error');
                 return;
             }
 
-            if (rawData.unit_id === '') rawData.unit_id = null; // Handle optional unit
+            if (rawData.unit_id === '') rawData.unit_id = null;
 
             const homeworkData = {
                 title: rawData.title,
@@ -337,12 +366,18 @@
             };
 
             try {
-                await adminService.createHomework(homeworkData, newHomeworkQuestions);
-                showToast('تم إنشاء الواجب بنجاح', 'success');
+                if (isEdit) {
+                    await adminService.updateHomework(rawData.id, homeworkData);
+                    await adminService.syncQuestions(rawData.id, 'homework', newHomeworkQuestions);
+                    showToast('تم تحديث الواجب بنجاح', 'success');
+                } else {
+                    await adminService.createHomework(homeworkData, newHomeworkQuestions);
+                    showToast('تم إنشاء الواجب بنجاح', 'success');
+                }
                 closeModal(form.closest('.modal-wrapper'));
                 loadHomeworks();
             } catch (error) {
-                handleError(error, 'handleCreateHomework');
+                handleError(error, isEdit ? 'handleUpdateHomework' : 'handleCreateHomework');
             }
         }
 

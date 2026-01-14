@@ -15,7 +15,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        /* Brand Gradient */
+        background: radial-gradient(circle at center, var(--primary) 0%, var(--primary-dark) 100%);
         padding: var(--spacing-md);
       }
 
@@ -23,9 +24,10 @@
         width: 100%;
         max-width: 500px;
         background-color: var(--bg-primary);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: var(--radius-xl);
         padding: var(--spacing-2xl);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
       }
 
       .auth-header {
@@ -35,12 +37,41 @@
 
       .auth-header h1 {
         font-size: var(--font-size-2xl);
-        color: var(--text-primary);
+        color: var(--primary);
         margin-bottom: var(--spacing-sm);
+      }
+      
+      .auth-header p {
+        color: var(--text-secondary);
       }
     </style>
   </head>
   <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <div class="container navbar-container">
+        <!-- User Icon -->
+        <div class="navbar-actions" style="display: flex; gap: 10px; align-items: center;">
+            <a href="login.html" class="navbar-user-icon" style="color: var(--accent); font-size: 1.5rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </a>
+        </div>
+
+        <button class="navbar-mobile-toggle" id="navbarToggle">☰</button>
+        
+        <ul class="navbar-nav" id="navbarNav">
+          <li><a href="index.html" class="nav-link">الرئيسية</a></li>
+          <li><a href="about.html" class="nav-link">عن الموقع</a></li>
+          <li><a href="login.html" class="nav-link">تسجيل الدخول</a></li>
+          <li><a href="register-student.html" class="nav-link active" style="color: var(--accent);">تسجيل طالب</a></li>
+        </ul>
+
+        <a href="index.html" class="navbar-brand">
+             <img src="assets/images/شعار الموقع.png" alt="شعار الأستاذ عصام عبدالمنعم">
+        </a>
+      </div>
+    </nav>
+
     <div class="auth-page">
       <div class="auth-card">
         <div class="auth-header">
@@ -130,12 +161,18 @@
         </form>
 
         <div class="auth-links mt-4 text-center">
-          <span>لديك حساب بالفعل؟ <a href="login.html">تسجيل الدخول</a></span>
+          <span>لديك حساب بالفعل؟ <a href="login.html" style="color: var(--primary);">تسجيل الدخول</a></span>
         </div>
 
         <div class="auth-links mt-3 text-center">
-          <a href="index.html">← العودة للرئيسية</a>
+          <a href="index.html" style="color: var(--text-secondary);">← العودة للرئيسية</a>
         </div>
+
+        <footer class="mt-4 text-center">
+          <p class="text-secondary" style="font-size: 0.9rem;">
+            &copy; 2026 أحــمـد عـصــام ـــ منصة الأستاذ عصام عبدالمنعم التعليمية. جميع الحقوق محفوظة.
+          </p>
+        </footer>
       </div>
     </div>
 
@@ -150,50 +187,67 @@
     <script src="js/services/auth.service.js"></script>
 
     <script>
+      // Mobile Navigation Toggle
+      const navbarToggle = document.getElementById('navbarToggle');
+      const navbarNav = document.getElementById('navbarNav');
+
+      if(navbarToggle) {
+          navbarToggle.addEventListener('click', () => {
+            navbarNav.classList.toggle('active');
+            navbarToggle.textContent = navbarNav.classList.contains('active') ? '✕' : '☰';
+          });
+      }
+
       const registerForm = document.getElementById("registerForm");
       const registerBtn = document.getElementById("registerBtn");
 
-      registerForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
+      if(registerForm) {
+          registerForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
 
-        const formData = new FormData(registerForm);
-        const email = formData.get("email");
-        const password = formData.get("password");
-        const confirm_password = formData.get("confirm_password");
-        const full_name = formData.get("full_name");
-        const grade_level = parseInt(formData.get("grade_level"));
+            const formData = new FormData(registerForm);
+            const email = formData.get("email");
+            const password = formData.get("password");
+            const confirm_password = formData.get("confirm_password");
+            const full_name = formData.get("full_name");
+            const grade_level = parseInt(formData.get("grade_level"));
 
-        if (password !== confirm_password) {
-          showError("كلمات المرور غير متطابقة");
-          return;
-        }
+            if (password !== confirm_password) {
+              // Assuming showError is available from toast.js or helpers
+              if(typeof showError === 'function') showError("كلمات المرور غير متطابقة");
+              else alert("كلمات المرور غير متطابقة");
+              return;
+            }
 
-        registerBtn.disabled = true;
-        registerBtn.textContent = "جارٍ إنشاء الحساب...";
+            registerBtn.disabled = true;
+            registerBtn.textContent = "جارٍ إنشاء الحساب...";
 
-        try {
-          const result = await authService.signUp(email, password, {
-            full_name,
-            role: "student",
-            grade_level,
+            try {
+              const result = await authService.signUp(email, password, {
+                full_name,
+                role: "student",
+                grade_level,
+              });
+
+              if (result.session) {
+                if(typeof showToast === 'function') showToast("تم إنشاء الحساب بنجاح! يتم الآن توجيهك...", "success");
+                setTimeout(() => {
+                  window.location.href = "student/dashboard.html";
+                }, 2000);
+              } else {
+                 if(typeof showToast === 'function') showToast(result.message || "تم إنشاء الحساب! يرجى مراجعة بريدك الإلكتروني.", "success", 10000);
+                 else alert("تم إنشاء الحساب! يرجى مراجعة بريدك الإلكتروني.");
+                
+                registerBtn.textContent = "تم إرسال رابط التفعيل";
+              }
+            } catch (error) {
+              registerBtn.disabled = false;
+              registerBtn.textContent = "إنشاء الحساب";
+              if(typeof handleError === 'function') handleError(error, "studentSignUp");
+              else console.error(error);
+            }
           });
-
-          if (result.session) {
-            showToast("تم إنشاء الحساب بنجاح! يتم الآن توجيهك...", "success");
-            setTimeout(() => {
-              window.location.href = "student/dashboard.html";
-            }, 2000);
-          } else {
-            showToast(result.message || "تم إنشاء الحساب! يرجى مراجعة بريدك الإلكتروني.", "success", 10000);
-            registerBtn.textContent = "تم إرسال رابط التفعيل";
-            // Optionally redirect to a "Verify Email" page or just leave it
-          }
-        } catch (error) {
-          registerBtn.disabled = false;
-          registerBtn.textContent = "إنشاء الحساب";
-          handleError(error, "studentSignUp");
-        }
-      });
+      }
     </script>
   </body>
 </html>

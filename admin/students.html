@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الطلاب - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    
+    <style>
+        .student-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .student-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+        .student-avatar {
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .stats-badge {
+            background: var(--bg-tertiary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body class="bg-secondary">
+    <div class="admin-layout">
+        <!-- Sidebar (Shared code - will be updated in all files later) -->
+        <aside class="sidebar" id="sidebar-container"></aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1>إدارة الطلاب</h1>
+                    <p class="text-secondary">عرض وبيانات جميع الطلاب المسجلين في المنصة</p>
+                </div>
+            </header>
+
+            <!-- Search & Filters -->
+            <div class="card p-3 mb-4">
+                <div class="row items-center justify-between gap-4">
+                    <div class="flex-1">
+                        <input type="text" id="studentSearch" class="form-control" placeholder="البحث باسم الطالب أو البريد الإلكتروني..." oninput="filterStudents()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="text-center py-5">
+                <div class="spinner"></div>
+                <p class="mt-2 text-secondary">جاري تحميل قائمة الطلاب...</p>
+            </div>
+
+            <!-- Students Grid -->
+            <div id="studentsGrid" class="grid grid-3 gap-4 d-none">
+                <!-- Cards injected here -->
+            </div>
+
+            <div id="noResults" class="text-center py-5 d-none">
+                <div style="font-size: 3rem">🔍</div>
+                <p class="mt-2 text-secondary">لم يتم العثور على طلاب يطابقون بحثك</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/admin.service.js"></script>
+    <script src="../js/components/admin-sidebar.js"></script>
+
+    <script>
+        let allStudents = [];
+
+        async function init() {
+            try {
+                await authService.requireRole('admin', '../login.html');
+                renderAdminSidebar('students');
+                await loadStudents();
+            } catch (error) {
+                handleError(error, 'students.init');
+            }
+        }
+
+        async function loadStudents() {
+            try {
+                allStudents = await adminService.getStudentsWithStats();
+                displayStudents(allStudents);
+                document.getElementById('loading').classList.add('d-none');
+                document.getElementById('studentsGrid').classList.remove('d-none');
+            } catch (error) {
+                handleError(error, 'loadStudents');
+            }
+        }
+
+        function displayStudents(students) {
+            const grid = document.getElementById('studentsGrid');
+            const noResults = document.getElementById('noResults');
+            grid.innerHTML = '';
+
+            if (students.length === 0) {
+                grid.classList.add('d-none');
+                noResults.classList.remove('d-none');
+                return;
+            }
+
+            grid.classList.remove('d-none');
+            noResults.classList.add('d-none');
+
+            students.forEach(student => {
+                const card = document.createElement('div');
+                card.className = 'card student-card p-4';
+                card.onclick = () => window.location.href = `student-details.html?id=${student.id}`;
+                
+                const initial = student.full_name ? student.full_name.charAt(0).toUpperCase() : '?';
+                
+                card.innerHTML = `
+                    <div class="d-flex items-center gap-3 mb-3">
+                        <div class="student-avatar">${initial}</div>
+                        <div>
+                            <h3 class="h5 mb-0">${student.full_name || 'طالب جديد'}</h3>
+                            <div class="small text-secondary">الصف: ${student.grade_level || '--'}</div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <span class="badge ${student.exam_count > 0 ? 'badge-success' : 'badge-secondary'}">📝 ${student.exam_count} اختبارات</span>
+                        <span class="badge ${student.homework_count > 0 ? 'badge-info' : 'badge-secondary'}">🏠 ${student.homework_count} واجبات</span>
+                    </div>
+                    <div class="mt-3 pt-3 border-top d-flex justify-between items-center">
+                        <span class="small text-secondary">${student.email || ''}</span>
+                        <a href="student-details.html?id=${student.id}" class="btn btn-xs btn-outline">تفاصيل</a>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterStudents() {
+            const term = document.getElementById('studentSearch').value.toLowerCase();
+            const filtered = allStudents.filter(s => 
+                (s.full_name && s.full_name.toLowerCase().includes(term)) ||
+                (s.email && s.email.toLowerCase().includes(term))
+            );
+            displayStudents(filtered);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
