@@ -1,0 +1,147 @@
+/**
+ * =====================================================
+ * Admin Styles
+ * منصة الأستاذ عصام عبدالمنعم التعليمية
+ * =====================================================
+ */
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 260px;
+  background-color: var(--bg-secondary);
+  border-left: 1px solid var(--border-color);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebar-logo {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: var(--spacing-2xl);
+  text-align: center;
+}
+
+.sidebar-nav {
+  list-style: none;
+  flex: 1;
+}
+
+.nav-item {
+  margin-bottom: var(--spacing-sm);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.nav-link:hover, .nav-link.active {
+  background-color: var(--primary);
+  color: white;
+  text-decoration: none;
+}
+
+.sidebar-footer {
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--border-color);
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: var(--spacing-xl);
+  background-color: var(--bg-primary);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-2xl);
+}
+
+/* Dashboard Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-2xl);
+}
+
+.stat-card {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xl);
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background-color: rgba(37, 99, 235, 0.1);
+  color: var(--primary);
+}
+
+.stat-info .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.stat-info .stat-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    padding: var(--spacing-md);
+  }
+  
+  .sidebar-logo {
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .sidebar-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+  
+  .nav-item {
+    margin-bottom: 0;
+  }
+}

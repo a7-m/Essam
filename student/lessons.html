@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دروسي - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/student.css">
+</head>
+<body class="bg-secondary">
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">الأستاذ عصام</div>
+            <nav class="sidebar-nav">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span>📊</span> لوحة التحكم</a></li>
+                <li class="nav-item"><a href="lessons.html" class="nav-link active"><span>📝</span> دروسي</a></li>
+                <li class="nav-item"><a href="homeworks.html" class="nav-link"><span>🏠</span> الواجبات</a></li>
+                <li class="nav-item"><a href="exams.html" class="nav-link"><span>✍️</span> الاختبارات</a></li>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-danger btn-block" onclick="authService.signOut()">🚪 تسجيل الخروج</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1>دروسي والمحتوى التعليمي</h1>
+                    <p class="text-secondary">تصفح المواد والوحدات والدروس المتاحة لك</p>
+                </div>
+            </header>
+
+            <div class="row">
+                <!-- Navigation Drawer/List -->
+                <div class="col-4">
+                    <div class="card p-0 overflow-hidden">
+                        <div class="p-3 border-bottom bg-tertiary">
+                            <label class="form-label mb-0 small">اختر المادة</label>
+                            <select id="select-subject" class="form-control mt-1" onchange="onSubjectChange()">
+                                <option value="">-- اختر المادة --</option>
+                            </select>
+                        </div>
+                        <div id="units-nav" class="p-2" style="max-height: 60vh; overflow-y: auto">
+                            <!-- Units and Lessons Tree -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Area -->
+                <div class="col-8">
+                    <div id="lesson-content-view" class="d-none">
+                        <div class="card p-4">
+                            <h2 id="lesson-title">عنوان الدرس</h2>
+                            <div id="lesson-text" class="mt-3"></div>
+                            
+                            <hr class="my-4">
+                            
+                            <!-- Video Section -->
+                            <div id="video-section" class="d-none">
+                                <h3>مشاهدة الشرح</h3>
+                                <div id="video-container" class="mt-2" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: var(--radius-lg)">
+                                    <!-- YouTube Embed -->
+                                </div>
+                            </div>
+
+                            <!-- Files Section -->
+                            <div id="files-section" class="mt-4">
+                                <h3>الملفات والمرفقات</h3>
+                                <div id="files-list" class="grid grid-2 mt-2">
+                                    <!-- Files go here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="no-lesson-msg" class="card p-5 text-center text-secondary">
+                        <p>يرجى اختيار درس من القائمة الجانبية للعرض</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/student.service.js"></script>
+
+    <script>
+        let subjects = [];
+        let units = [];
+        let lessons = [];
+
+        async function initPage() {
+            try {
+                await authService.requireRole('student', '../login.html');
+                subjects = await studentService.getMySubjects();
+                
+                const select = document.getElementById('select-subject');
+                subjects.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.name;
+                    select.appendChild(opt);
+                });
+
+                // Auto-select from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const subId = urlParams.get('subject');
+                if (subId) {
+                    select.value = subId;
+                    onSubjectChange();
+                }
+
+            } catch (error) {
+                handleError(error, 'initPage');
+            }
+        }
+
+        async function onSubjectChange() {
+            const subjectId = document.getElementById('select-subject').value;
+            const nav = document.getElementById('units-nav');
+            
+            if (!subjectId) {
+                nav.innerHTML = '';
+                return;
+            }
+
+            nav.innerHTML = '<div class="spinner"></div>';
+
+            try {
+                units = await studentService.getUnits(subjectId);
+                if (units.length === 0) {
+                    nav.innerHTML = '<p class="text-center p-3 small">لا توجد وحدات مضافة بعد.</p>';
+                    return;
+                }
+
+                nav.innerHTML = '';
+                for (const unit of units) {
+                    const unitLessons = await studentService.getLessons(unit.id);
+                    
+                    const unitEl = document.createElement('div');
+                    unitEl.className = 'mb-3';
+                    unitEl.innerHTML = `
+                        <div class="font-bold px-2 py-1 bg-secondary rounded small mb-1">${unit.title}</div>
+                        <div class="lessons-list">
+                            ${unitLessons.length === 0 ? '<p class="small text-muted px-4">لا توجد دروس</p>' : 
+                                unitLessons.map(l => `
+                                    <div class="nav-item lesson-nav-item py-1 px-3 pointer small" onclick="loadLesson('${l.id}')">
+                                        📄 ${l.title}
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    `;
+                    nav.appendChild(unitEl);
+                }
+            } catch (error) {
+                handleError(error, 'onSubjectChange');
+            }
+        }
+
+        async function loadLesson(lessonId) {
+            document.getElementById('lesson-content-view').classList.add('d-none');
+            document.getElementById('no-lesson-msg').classList.add('d-none');
+            
+            // Highlight active lesson
+            document.querySelectorAll('.lesson-nav-item').forEach(el => el.classList.remove('active', 'bg-primary', 'text-white'));
+            event.currentTarget.classList.add('active', 'bg-primary', 'text-white');
+
+            try {
+                const [details, files] = await Promise.all([
+                    studentService.getLessonDetails(lessonId),
+                    studentService.getLessonFiles(lessonId)
+                ]);
+
+                document.getElementById('lesson-title').textContent = details.title;
+                document.getElementById('lesson-text').textContent = details.content || '';
+                
+                // Handle Video
+                const ytFile = files.find(f => f.file_type === 'youtube');
+                const videoSec = document.getElementById('video-section');
+                if (ytFile) {
+                    videoSec.classList.remove('d-none');
+                    const videoId = getYoutubeId(ytFile.file_url);
+                    document.getElementById('video-container').innerHTML = `
+                        <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" 
+                                src="https://www.youtube.com/embed/${videoId}" 
+                                frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen></iframe>`;
+                } else {
+                    videoSec.classList.add('d-none');
+                }
+
+                // Handle Files
+                const otherFiles = files.filter(f => f.file_type !== 'youtube');
+                const filesList = document.getElementById('files-list');
+                if (otherFiles.length > 0) {
+                    filesList.innerHTML = otherFiles.map(f => `
+                        <a href="${f.file_url}" target="_blank" class="card p-3 d-flex flex-row align-items-center gap-3 text-no-decoration">
+                            <span style="font-size: 1.5rem">${f.file_type === 'pdf' ? '📕' : '🖼️'}</span>
+                            <div>
+                                <div class="font-bold small text-primary">${f.file_name}</div>
+                                <div class="text-secondary" style="font-size: 0.6rem">اضغط للمشاهدة أو التحميل</div>
+                            </div>
+                        </a>
+                    `).join('');
+                } else {
+                    filesList.innerHTML = '<p class="text-secondary small">لا توجد ملفات مرفقة.</p>';
+                }
+
+                document.getElementById('lesson-content-view').classList.remove('d-none');
+            } catch (error) {
+                handleError(error, 'loadLesson');
+            }
+        }
+
+        function getYoutubeId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

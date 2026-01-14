@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الواجبات - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/student.css">
+</head>
+<body class="bg-secondary">
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">الأستاذ عصام</div>
+            <nav class="sidebar-nav">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span>📊</span> لوحة التحكم</a></li>
+                <li class="nav-item"><a href="lessons.html" class="nav-link"><span>📝</span> دروسي</a></li>
+                <li class="nav-item"><a href="homeworks.html" class="nav-link active"><span>🏠</span> الواجبات</a></li>
+                <li class="nav-item"><a href="exams.html" class="nav-link"><span>✍️</span> الاختبارات</a></li>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-danger btn-block" onclick="authService.signOut()">🚪 تسجيل الخروج</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1>الواجبات المتاحة</h1>
+                    <p class="text-secondary">حل الواجبات المنزلية ومراجعة النتائج</p>
+                </div>
+            </header>
+
+            <div id="homeworks-container" class="grid grid-2">
+                <div class="spinner"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/components/modal.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/student.service.js"></script>
+
+    <script>
+        async function initPage() {
+            try {
+                await authService.requireRole('student', '../login.html');
+                loadHomeworks();
+            } catch (error) {
+                handleError(error, 'initPage');
+            }
+        }
+
+        async function loadHomeworks() {
+            const container = document.getElementById('homeworks-container');
+            container.innerHTML = '<div class="spinner col-span-2"></div>';
+
+            try {
+                const homeworks = await studentService.getAvailableHomeworks();
+                if (homeworks.length === 0) {
+                    container.innerHTML = '<div class="card p-5 text-center text-secondary col-span-2">لا توجد واجبات متاحة لك في الوقت الحالي.</div>';
+                    return;
+                }
+
+                container.innerHTML = homeworks.map(h => `
+                    <div class="card p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h3 class="mb-1">${h.title}</h3>
+                                <div class="text-secondary small mb-2">${h.description || ''}</div>
+                                <span class="badge badge-primary">${h.subjects?.name}</span>
+                            </div>
+                            <!-- Status Badges can be added here if tracking completion -->
+                        </div>
+
+                        <!-- 
+                             Use button to start homework. 
+                             Ideally we check if completed, but simplified for now: just start.
+                        -->
+                        <button class="btn btn-primary btn-block" onclick="startHomework('${h.id}', '${h.title}')">حل الواجب</button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                handleError(error, 'loadHomeworks');
+            }
+        }
+
+        async function startHomework(homeworkId, title) {
+            window.location.href = `homework-taking.html?id=${homeworkId}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

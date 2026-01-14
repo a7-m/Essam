@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>تسجيل طالب جديد - منصة الأستاذ عصام</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/components.css" />
+
+    <style>
+      .auth-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: var(--spacing-md);
+      }
+
+      .auth-card {
+        width: 100%;
+        max-width: 500px;
+        background-color: var(--bg-primary);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-2xl);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+
+      .auth-header {
+        text-align: center;
+        margin-bottom: var(--spacing-xl);
+      }
+
+      .auth-header h1 {
+        font-size: var(--font-size-2xl);
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-sm);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="auth-page">
+      <div class="auth-card">
+        <div class="auth-header">
+          <h1>إنشاء حساب طالب</h1>
+          <p>انضم إلينا اليوم وابدأ رحلتك التعليمية</p>
+        </div>
+
+        <form id="registerForm">
+          <div class="form-group">
+            <label for="full_name" class="form-label">الاسم الكامل</label>
+            <input
+              type="text"
+              id="full_name"
+              name="full_name"
+              class="form-control"
+              placeholder="اسمك الثلاثي"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="email" class="form-label">البريد الإلكتروني</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="form-control"
+              placeholder="example@email.com"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="grade_level" class="form-label">الصف الدراسي</label>
+            <select
+              id="grade_level"
+              name="grade_level"
+              class="form-control"
+              required
+            >
+              <option value="">-- اختر صفك --</option>
+              <option value="5">الصف الخامس</option>
+              <option value="6">الصف السادس</option>
+              <option value="7">الصف السابع</option>
+              <option value="8">الصف الثامن</option>
+              <option value="9">الصف التاسع</option>
+              <option value="10">الصف العاشر</option>
+              <option value="11">الصف الحادي عشر</option>
+              <option value="12">الصف الثاني عشر</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="form-label">كلمة المرور</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-control"
+              placeholder="••••••••"
+              required
+              minlength="6"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="confirm_password" class="form-label"
+              >تأكيد كلمة المرور</label
+            >
+            <input
+              type="password"
+              id="confirm_password"
+              name="confirm_password"
+              class="form-control"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn-primary btn-block btn-lg"
+            id="registerBtn"
+          >
+            إنشاء الحساب
+          </button>
+        </form>
+
+        <div class="auth-links mt-4 text-center">
+          <span>لديك حساب بالفعل؟ <a href="login.html">تسجيل الدخول</a></span>
+        </div>
+
+        <div class="auth-links mt-3 text-center">
+          <a href="index.html">← العودة للرئيسية</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils/errors.js"></script>
+    <script src="js/utils/validation.js"></script>
+    <script src="js/utils/helpers.js"></script>
+    <script src="js/utils/theme.js"></script>
+    <script src="js/components/toast.js"></script>
+    <script src="js/services/auth.service.js"></script>
+
+    <script>
+      const registerForm = document.getElementById("registerForm");
+      const registerBtn = document.getElementById("registerBtn");
+
+      registerForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(registerForm);
+        const email = formData.get("email");
+        const password = formData.get("password");
+        const confirm_password = formData.get("confirm_password");
+        const full_name = formData.get("full_name");
+        const grade_level = parseInt(formData.get("grade_level"));
+
+        if (password !== confirm_password) {
+          showError("كلمات المرور غير متطابقة");
+          return;
+        }
+
+        registerBtn.disabled = true;
+        registerBtn.textContent = "جارٍ إنشاء الحساب...";
+
+        try {
+          const result = await authService.signUp(email, password, {
+            full_name,
+            role: "student",
+            grade_level,
+          });
+
+          if (result.session) {
+            showToast("تم إنشاء الحساب بنجاح! يتم الآن توجيهك...", "success");
+            setTimeout(() => {
+              window.location.href = "student/dashboard.html";
+            }, 2000);
+          } else {
+            showToast(result.message || "تم إنشاء الحساب! يرجى مراجعة بريدك الإلكتروني.", "success", 10000);
+            registerBtn.textContent = "تم إرسال رابط التفعيل";
+            // Optionally redirect to a "Verify Email" page or just leave it
+          }
+        } catch (error) {
+          registerBtn.disabled = false;
+          registerBtn.textContent = "إنشاء الحساب";
+          handleError(error, "studentSignUp");
+        }
+      });
+    </script>
+  </body>
+</html>

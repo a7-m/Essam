@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>تسجيل ولي أمر - منصة الأستاذ عصام</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/components.css" />
+
+    <style>
+      .auth-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: var(--spacing-md);
+      }
+
+      .auth-card {
+        width: 100%;
+        max-width: 500px;
+        background-color: var(--bg-primary);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-2xl);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+
+      .auth-header {
+        text-align: center;
+        margin-bottom: var(--spacing-xl);
+      }
+
+      .auth-header h1 {
+        font-size: var(--font-size-2xl);
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .info-box {
+        background-color: var(--bg-tertiary);
+        border-right: 4px solid var(--primary);
+        padding: var(--spacing-md);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--spacing-lg);
+      }
+
+      .info-box p {
+        margin: 0;
+        font-size: var(--font-size-sm);
+        color: var(--text-secondary);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="auth-page">
+      <div class="auth-card">
+        <div class="auth-header">
+          <h1>إنشاء حساب ولي أمر</h1>
+          <p>سجل الآن لمتابعة أداء أبنائك الأكاديمي</p>
+        </div>
+
+        <div class="info-box">
+          <p>
+            📌 يمكنك متابعة نتائج وأداء أبنائك الطلاب من خلال هذا الحساب.
+            سيتم ربط حسابك تلقائياً بحساب الطالب بعد التسجيل.
+          </p>
+        </div>
+
+        <form id="registerForm">
+          <div class="form-group">
+            <label for="full_name" class="form-label">الاسم الكامل</label>
+            <input
+              type="text"
+              id="full_name"
+              name="full_name"
+              class="form-control"
+              placeholder="اسمك الكامل"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="email" class="form-label">البريد الإلكتروني</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="form-control"
+              placeholder="example@email.com"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="phone" class="form-label">رقم الهاتف (اختياري)</label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              class="form-control"
+              placeholder="05xxxxxxxx"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="form-label">كلمة المرور</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-control"
+              placeholder="••••••••"
+              required
+              minlength="6"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="confirm_password" class="form-label"
+              >تأكيد كلمة المرور</label
+            >
+            <input
+              type="password"
+              id="confirm_password"
+              name="confirm_password"
+              class="form-control"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="student_email" class="form-label"
+              >البريد الإلكتروني للطالب</label
+            >
+            <input
+              type="email"
+              id="student_email"
+              name="student_email"
+              class="form-control"
+              placeholder="البريد الإلكتروني المسجل للطالب"
+              required
+            />
+            <small class="text-secondary"
+              >أدخل البريد الإلكتروني المسجل به الطالب لربط الحسابات</small
+            >
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn-primary btn-block btn-lg"
+            id="registerBtn"
+          >
+            إنشاء الحساب
+          </button>
+        </form>
+
+        <div class="auth-links mt-4 text-center">
+          <span>لديك حساب بالفعل؟ <a href="login.html">تسجيل الدخول</a></span>
+        </div>
+
+        <div class="auth-links mt-3 text-center">
+          <a href="register-student.html">← تسجيل كطالب</a>
+          <span class="mx-2">|</span>
+          <a href="index.html">← العودة للرئيسية</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils/errors.js"></script>
+    <script src="js/utils/validation.js"></script>
+    <script src="js/utils/helpers.js"></script>
+    <script src="js/utils/theme.js"></script>
+    <script src="js/components/toast.js"></script>
+    <script src="js/services/auth.service.js"></script>
+
+    <script>
+      const registerForm = document.getElementById("registerForm");
+      const registerBtn = document.getElementById("registerBtn");
+
+      registerForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(registerForm);
+        const email = formData.get("email");
+        const password = formData.get("password");
+        const confirm_password = formData.get("confirm_password");
+        const full_name = formData.get("full_name");
+        const phone = formData.get("phone");
+        const student_email = formData.get("student_email");
+
+        // Validate passwords match
+        if (password !== confirm_password) {
+          showError("كلمات المرور غير متطابقة");
+          return;
+        }
+
+        // Validate student email is different from parent email
+        if (email === student_email) {
+          showError("يجب أن يكون البريد الإلكتروني للطالب مختلفاً عن بريدك");
+          return;
+        }
+
+        registerBtn.disabled = true;
+        registerBtn.textContent = "جارٍ إنشاء الحساب...";
+
+        try {
+          const result = await authService.signUpParent(email, password, {
+            full_name,
+            phone,
+            student_email,
+          });
+
+          if (result.session) {
+            showToast("تم إنشاء الحساب بنجاح! يتم الآن توجيهك...", "success");
+            setTimeout(() => {
+              window.location.href = "parent/dashboard.html";
+            }, 2000);
+          } else {
+            showToast(
+              result.message || "تم إنشاء الحساب! يرجى مراجعة بريدك الإلكتروني.",
+              "success",
+              10000
+            );
+            registerBtn.textContent = "تم إرسال رابط التفعيل";
+          }
+        } catch (error) {
+          registerBtn.disabled = false;
+          registerBtn.textContent = "إنشاء الحساب";
+          handleError(error, "parentSignUp");
+        }
+      });
+    </script>
+  </body>
+</html>

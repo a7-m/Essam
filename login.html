@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول - منصة الأستاذ عصام</title>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  
+  <style>
+    .auth-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: var(--spacing-md);
+    }
+    
+    .auth-card {
+      width: 100%;
+      max-width: 450px;
+      background-color: var(--bg-primary);
+      border-radius: var(--radius-xl);
+      padding: var(--spacing-2xl);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .auth-header {
+      text-align: center;
+      margin-bottom: var(--spacing-xl);
+    }
+    
+    .auth-header h1 {
+      font-size: var(--font-size-2xl);
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+    
+    .auth-header p {
+      color: var(--text-secondary);
+      margin-bottom: 0;
+    }
+    
+    .auth-links {
+      text-align: center;
+      margin-top: var(--spacing-lg);
+    }
+    
+    .auth-links a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    .auth-links a:hover {
+      text-decoration: underline;
+    }
+    
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: var(--spacing-lg) 0;
+      color: var(--text-tertiary);
+    }
+    
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .divider span {
+      padding: 0 var(--spacing-md);
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1>تسجيل الدخول</h1>
+        <p>منصة الأستاذ عصام عبدالمنعم التعليمية</p>
+      </div>
+      
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email" class="form-label">البريد الإلكتروني</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            class="form-control"
+            placeholder="your@email.com"
+            required
+            autocomplete="email"
+          >
+        </div>
+        
+        <div class="form-group">
+          <label for="password" class="form-label">كلمة المرور</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-control"
+            placeholder="••••••••"
+            required
+            autocomplete="current-password"
+          >
+        </div>
+        
+        <div class="form-group">
+          <div class="form-check">
+            <input
+              type="checkbox"
+              id="remember"
+              name="remember"
+              class="form-check-input"
+            >
+            <label for="remember">تذكرني</label>
+          </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">
+          تسجيل الدخول
+        </button>
+      </form>
+      
+      <div class="auth-links">
+        <a href="#" id="forgotPassword">نسيت كلمة المرور؟</a>
+      </div>
+      
+      <div class="divider">
+        <span>ليس لديك حساب؟</span>
+      </div>
+      
+      <div class="grid grid-2 gap-2">
+        <a href="register-student.html" class="btn btn-outline">
+          تسجيل طالب
+        </a>
+        <a href="register-parent.html" class="btn btn-outline">
+          تسجيل ولي أمر
+        </a>
+      </div>
+      
+      <div class="auth-links mt-3">
+        <a href="index.html">← العودة للرئيسية</a>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- App Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils/errors.js"></script>
+  <script src="js/utils/validation.js"></script>
+  <script src="js/utils/helpers.js"></script>
+  <script src="js/utils/theme.js"></script>
+  <script src="js/components/toast.js"></script>
+  <script src="js/components/modal.js"></script>
+  <script src="js/services/auth.service.js"></script>
+  
+  <script>
+    // Check if already logged in
+    (async () => {
+      const user = await authService.getCurrentUser();
+      if (user) {
+        // Redirect based on role
+        const role = user.profile.role;
+        if (role === 'admin') {
+          window.location.href = '/admin/dashboard.html';
+        } else if (role === 'student') {
+          window.location.href = '/student/dashboard.html';
+        } else if (role === 'parent') {
+          window.location.href = '/parent/dashboard.html';
+        }
+      }
+    })();
+    
+    // Login form handler
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(loginForm);
+      const email = formData.get('email').trim();
+      const password = formData.get('password');
+      
+      // Validate
+      const { isValid, errors } = validateForm(
+        { email, password },
+        {
+          email: [validators.email],
+          password: [validators.required],
+        }
+      );
+      
+      if (!isValid) {
+        displayFormErrors(errors);
+        return;
+      }
+      
+      // Clear previous errors
+      displayFormErrors({});
+      
+      // Disable button
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'جارٍ تسجيل الدخول...';
+      
+      try {
+        const user = await authService.signIn(email, password);
+        
+        // Redirect based on role
+        const role = user.profile.role;
+        if (role === 'admin') {
+          window.location.href = '/admin/dashboard.html';
+        } else if (role === 'student') {
+          window.location.href = '/student/dashboard.html';
+        } else if (role === 'parent') {
+          window.location.href = '/parent/dashboard.html';
+        }
+      } catch (error) {
+        // Error already handled by authService
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'تسجيل الدخول';
+      }
+    });
+    
+    // Forgot password handler
+    document.getElementById('forgotPassword').addEventListener('click', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value.trim();
+      
+      if (!email) {
+        showError('يرجى إدخال بريدك الإلكتروني أولاً');
+        document.getElementById('email').focus();
+        return;
+      }
+      
+      const confirmed = await showConfirm({
+        title: 'إعادة تعيين كلمة المرور',
+        message: `سيتم إرسال رابط إعادة تعيين كلمة المرور إلى: ${email}`,
+        confirmText: 'إرسال',
+        cancelText: 'إلغاء',
+        confirmClass: 'btn-primary',
+      });
+      
+      if (confirmed) {
+        try {
+          await authService.resetPassword(email);
+        } catch (error) {
+          // Error already handled
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الدروس والملفات - منصة الأستاذ عصام عبدالمنعم</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="bg-secondary">
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">الأستاذ عصام</div>
+            <nav class="sidebar-nav">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span>📊</span> لوحة التحكم</a></li>
+                <li class="nav-item"><a href="subjects.html" class="nav-link"><span>📚</span> المواد والوحدات</a></li>
+                <li class="nav-item"><a href="lessons.html" class="nav-link active"><span>📝</span> الدروس والملفات</a></li>
+                <li class="nav-item"><a href="homeworks.html" class="nav-link"><span>🏠</span> الواجبات</a></li>
+                <li class="nav-item"><a href="exams.html" class="nav-link"><span>📝</span> الاختبارات</a></li>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-danger btn-block" onclick="authService.signOut()">🚪 تسجيل الخروج</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1>إدارة الدروس والملفات</h1>
+                    <p class="text-secondary">رفع الملفات التعليمية وإدارة المحتوى الدراسي</p>
+                </div>
+            </header>
+
+            <!-- Selection Section -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <label class="form-label">اختر المادة</label>
+                            <select id="select-subject" class="form-control" onchange="onSubjectChange()">
+                                <option value="">-- اختر المادة --</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">اختر الوحدة</label>
+                            <select id="select-unit" class="form-control" onchange="onUnitChange()" disabled>
+                                <option value="">-- اختر الوحدة --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lessons Section -->
+            <div id="lessons-view" class="d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>قائمة الدروس</h3>
+                    <button class="btn btn-primary" onclick="openLessonModal()">➕ إضافة درس جديد</button>
+                </div>
+                <div id="lessons-container" class="grid grid-2">
+                    <!-- Lessons will be loaded here -->
+                </div>
+            </div>
+
+            <div id="no-selection-msg" class="text-center p-4">
+                <p class="text-secondary">يرجى اختيار المادة والوحدة لعرض الدروس</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/components/modal.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/admin.service.js"></script>
+
+    <script>
+        let subjects = [];
+        let selectedSubjectId = null;
+        let selectedUnitId = null;
+
+        async function initPage() {
+            try {
+                await authService.requireRole('admin');
+                subjects = await adminService.getSubjects();
+                const select = document.getElementById('select-subject');
+                subjects.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = `${s.name} (الصف ${s.grade_level})`;
+                    select.appendChild(opt);
+                });
+            } catch (error) {
+                handleError(error, 'initPage');
+            }
+        }
+
+        async function onSubjectChange() {
+            selectedSubjectId = document.getElementById('select-subject').value;
+            const unitSelect = document.getElementById('select-unit');
+            
+            unitSelect.innerHTML = '<option value="">-- اختر الوحدة --</option>';
+            unitSelect.disabled = true;
+            document.getElementById('lessons-view').classList.add('d-none');
+            document.getElementById('no-selection-msg').classList.remove('d-none');
+
+            if (!selectedSubjectId) return;
+
+            try {
+                const units = await adminService.getUnits(selectedSubjectId);
+                units.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u.id;
+                    opt.textContent = u.title;
+                    unitSelect.appendChild(opt);
+                });
+                unitSelect.disabled = false;
+            } catch (error) {
+                handleError(error, 'onSubjectChange');
+            }
+        }
+
+        async function onUnitChange() {
+            selectedUnitId = document.getElementById('select-unit').value;
+            
+            if (!selectedUnitId) {
+                document.getElementById('lessons-view').classList.add('d-none');
+                document.getElementById('no-selection-msg').classList.remove('d-none');
+                return;
+            }
+
+            document.getElementById('lessons-view').classList.remove('d-none');
+            document.getElementById('no-selection-msg').classList.add('d-none');
+            loadLessons();
+        }
+
+        async function loadLessons() {
+            const container = document.getElementById('lessons-container');
+            container.innerHTML = '<div class="flex-center p-4 col-span-2"><div class="spinner"></div></div>';
+            
+            try {
+                const lessons = await adminService.getLessons(selectedUnitId);
+                if (lessons.length === 0) {
+                    container.innerHTML = '<div class="text-center p-4 col-span-2">لا توجد دروس مضافة في هذه الوحدة.</div>';
+                    return;
+                }
+
+                container.innerHTML = lessons.map(lesson => `
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between">
+                            <span>الترتيب: ${lesson.order_index}</span>
+                            <div class="gap-1 d-flex">
+                                <button class="btn btn-sm btn-outline" onclick="openLessonModal('${lesson.id}')">✏️</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteLesson('${lesson.id}')">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h3>${lesson.title}</h3>
+                            <p class="text-secondary">${lesson.content || 'لا يوجد محتوى نصي'}</p>
+                            
+                            <hr class="my-3">
+                            <h4>الملفات والمصادر</h4>
+                            <div id="files-for-${lesson.id}" class="mt-2">
+                                <div class="spinner spinner-sm"></div>
+                            </div>
+                            <div class="mt-3 gap-1 d-flex">
+                                <button class="btn btn-sm btn-primary" onclick="openUploadModal('${lesson.id}')">📁 رفع ملف</button>
+                                <button class="btn btn-sm btn-secondary" onclick="openYoutubeModal('${lesson.id}')">🎥 يوتيوب</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Load files for each lesson
+                lessons.forEach(l => loadFiles(l.id));
+
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-error">فشل تحميل الدروس: ${error.message}</div>`;
+            }
+        }
+
+        async function loadFiles(lessonId) {
+            const container = document.getElementById(`files-for-${lessonId}`);
+            try {
+                const files = await adminService.getFiles(lessonId);
+                if (files.length === 0) {
+                    container.innerHTML = '<p class="text-muted small">لا توجد ملفات مرفقة.</p>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <ul class="list-unstyled" style="list-style: none">
+                        ${files.map(f => `
+                            <li class="d-flex justify-content-between align-items-center mb-1 p-2 bg-tertiary rounded">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span>${f.file_type === 'youtube' ? '📺' : '📄'}</span>
+                                    <span class="small text-truncate" style="max-width: 150px">${f.file_name}</span>
+                                </div>
+                                <button class="btn btn-sm text-error" onclick="deleteFile('${f.id}', '${lessonId}')">×</button>
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+            } catch (error) {
+                container.innerHTML = '<p class="text-error small">فشل تحميل الملفات</p>';
+            }
+        }
+
+        function openLessonModal(lessonId = null) {
+            const lesson = lessonId ? null : null; // Placeholder: would normally find in local state
+            
+            // If editing, we'd fetch or find
+            const lessonPromise = lessonId ? adminService.getLessons(selectedUnitId).then(list => list.find(l => l.id === lessonId)) : Promise.resolve(null);
+
+            lessonPromise.then(lesson => {
+                const title = lessonId ? 'تعديل درس' : 'إضافة درس جديد';
+                const content = `
+                    <form id="lesson-form">
+                        <div class="form-group">
+                            <label class="form-label">عنوان الدرس</label>
+                            <input type="text" name="title" class="form-control" value="${lesson?.title || ''}" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">المحتوى النصي (اختياري)</label>
+                            <textarea name="content" class="form-control">${lesson?.content || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">الترتيب</label>
+                            <input type="number" name="order_index" class="form-control" value="${lesson?.order_index || 0}" required>
+                        </div>
+                    </form>
+                `;
+
+                const footer = `
+                    <button class="btn btn-secondary" onclick="closeModal(this.closest('.modal-wrapper'))">إلغاء</button>
+                    <button class="btn btn-primary" onclick="saveLesson('${lessonId}')">حفظ</button>
+                `;
+
+                showModal({ title, content, footer });
+            });
+        }
+
+        async function saveLesson(id) {
+            const form = document.getElementById('lesson-form');
+            const data = Object.fromEntries(new FormData(form).entries());
+            data.order_index = parseInt(data.order_index);
+            data.unit_id = selectedUnitId;
+
+            try {
+                if (id !== 'null' && id !== '') {
+                    await adminService.updateLesson(id, data);
+                    showToast('تم تحديث الدرس بنجاح', 'success');
+                } else {
+                    await adminService.addLesson(data);
+                    showToast('تمت إضافة الدرس بنجاح', 'success');
+                }
+                closeModal(form.closest('.modal-wrapper'));
+                loadLessons();
+            } catch (error) {
+                handleError(error, 'saveLesson');
+            }
+        }
+
+        async function deleteLesson(id) {
+            if (await showConfirm({ message: 'هل أنت متأكد من حذف هذا الدرس؟ سيتم حذف جميع الملفات المرفقة به.' })) {
+                try {
+                    await adminService.deleteLesson(id);
+                    showToast('تم حذف الدرس بنجاح', 'success');
+                    loadLessons();
+                } catch (error) {
+                    handleError(error, 'deleteLesson');
+                }
+            }
+        }
+
+        function openUploadModal(lessonId) {
+            const title = 'رفع ملف للدرس';
+            const content = `
+                <div class="form-group">
+                    <label class="form-label">اختر الملف (PDF أو صورة)</label>
+                    <input type="file" id="file-input" class="form-control" accept=".pdf,image/*">
+                    <small class="form-text">الحد الأقصى: 50 ميجابايت</small>
+                </div>
+            `;
+            const footer = `
+                <button class="btn btn-secondary" onclick="closeModal(this.closest('.modal-wrapper'))">إلغاء</button>
+                <button id="upload-btn" class="btn btn-primary" onclick="handleFileUpload('${lessonId}')">رفع</button>
+            `;
+            showModal({ title, content, footer });
+        }
+
+        async function handleFileUpload(lessonId) {
+            const input = document.getElementById('file-input');
+            const file = input.files[0];
+            if (!file) {
+                showToast('يرجى اختيار ملف أولاً', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('upload-btn');
+            btn.disabled = true;
+            btn.textContent = 'جاري الرفع...';
+
+            try {
+                const type = file.type.includes('pdf') ? 'pdf' : 'image';
+                await adminService.uploadFile(lessonId, file, type);
+                showToast('تم رفع الملف بنجاح', 'success');
+                closeModal(btn.closest('.modal-wrapper'));
+                loadFiles(lessonId);
+            } catch (error) {
+                handleError(error, 'handleFileUpload');
+                btn.disabled = false;
+                btn.textContent = 'رفع';
+            }
+        }
+
+        function openYoutubeModal(lessonId) {
+            const title = 'إضافة رابط يوتيوب';
+            const content = `
+                <div class="form-group">
+                    <label class="form-label">عنوان الفيديو</label>
+                    <input type="text" id="yt-title" class="form-control" placeholder="مثلاً: شرح قصيدة...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">رابط الفيديو (URL)</label>
+                    <input type="url" id="yt-url" class="form-control" placeholder="https://www.youtube.com/watch?v=...">
+                </div>
+            `;
+            const footer = `
+                <button class="btn btn-secondary" onclick="closeModal(this.closest('.modal-wrapper'))">إلغاء</button>
+                <button class="btn btn-primary" onclick="handleYoutubeSave('${lessonId}')">حفظ</button>
+            `;
+            showModal({ title, content, footer });
+        }
+
+        async function handleYoutubeSave(lessonId) {
+            const title = document.getElementById('yt-title').value;
+            const url = document.getElementById('yt-url').value;
+            if (!title || !url) {
+                showToast('يرجى ملء جميع الحقول', 'error');
+                return;
+            }
+
+            try {
+                await adminService.addYoutubeLink(lessonId, title, url);
+                showToast('تمت إضافة الرابط بنجاح', 'success');
+                closeModal(document.querySelector('.modal-wrapper'));
+                loadFiles(lessonId);
+            } catch (error) {
+                handleError(error, 'handleYoutubeSave');
+            }
+        }
+
+        async function deleteFile(fileId, lessonId) {
+            if (await showConfirm({ message: 'هل أنت متأكد من حذف هذا الملف؟' })) {
+                try {
+                    await adminService.deleteFile(fileId);
+                    showToast('تم حذف الملف بنجاح', 'success');
+                    loadFiles(lessonId);
+                } catch (error) {
+                    handleError(error, 'deleteFile');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

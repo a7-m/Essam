@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نتائج الطالب - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .student-info-card {
+            background-color: var(--bg-secondary);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+
+        .info-item {
+            text-align: center;
+            padding: var(--spacing-md);
+            background-color: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+        }
+
+        .info-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .info-value {
+            font-size: var(--font-size-lg);
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .exams-table {
+            background-color: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: var(--bg-tertiary);
+            padding: var(--spacing-md);
+            text-align: right;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-md);
+            font-weight: bold;
+            font-size: var(--font-size-sm);
+        }
+
+        .score-excellent {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .score-good {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .score-average {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .score-poor {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+        }
+
+        .status-passed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-failed {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .exams-table {
+                overflow-x: auto;
+            }
+
+            table {
+                min-width: 600px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-secondary">
+    <div class="container py-4">
+        <!-- Back Button -->
+        <div class="mb-3">
+            <a href="dashboard.html" class="btn btn-outline">
+                ← العودة
+            </a>
+        </div>
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="h2 mb-1" id="pageTitle">نتائج الطالب</h1>
+            <p class="mb-0" id="pageSubtitle">متابعة الأداء الأكاديمي</p>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="text-center py-5">
+            <div class="spinner"></div>
+            <p class="mt-2">جاري التحميل...</p>
+        </div>
+
+        <!-- Student Info Card -->
+        <div id="studentInfoCard" class="student-info-card d-none">
+            <h3 class="mb-3" id="studentName">اسم الطالب</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">إجمالي الاختبارات</div>
+                    <div class="info-value" id="totalExams">0</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">المعدل العام</div>
+                    <div class="info-value" id="avgScore">0%</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">نسبة النجاح</div>
+                    <div class="info-value" id="passRate">0%</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">الاتجاه</div>
+                    <div class="info-value" id="trend">مستقر</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exams Table -->
+        <div id="examsContainer" class="d-none">
+            <h2 class="mb-3">تفاصيل الاختبارات</h2>
+            <div class="exams-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الاختبار</th>
+                            <th>الصف</th>
+                            <th>النتيجة</th>
+                            <th>النسبة المئوية</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="examsTableBody">
+                        <!-- Exams will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state d-none">
+            <div style="font-size: 3rem;">📝</div>
+            <h3>لا توجد اختبارات بعد</h3>
+            <p>لم يقم الطالب بأداء أي اختبارات حتى الآن</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/parent.service.js"></script>
+
+    <script>
+        let studentId = null;
+        let exams = [];
+
+        async function init() {
+            try {
+                // Require parent auth
+                const user = await authService.requireRole('parent', '../login.html');
+                if (!user) return;
+
+                // Get student ID from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                studentId = urlParams.get('id');
+
+                if (!studentId) {
+                    showError('معرف الطالب غير موجود');
+                    setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                    return;
+                }
+
+                await loadStudentData();
+                await loadExams();
+            } catch (error) {
+                handleError(error, 'studentResults.init');
+            }
+        }
+
+        async function loadStudentData() {
+            try {
+                // Get student performance data
+                const perf = await parentService.getStudentPerformance(studentId);
+
+                // Get student profile from linked students
+                const students = await parentService.getLinkedStudents();
+                const student = students.find(s => s.student.id === studentId)?.student;
+
+                if (!student) {
+                    throw new Error('الطالب غير موجود');
+                }
+
+                document.getElementById('pageTitle').textContent = `نتائج ${student.full_name}`;
+                document.getElementById('pageSubtitle').textContent = `الصف ${student.grade_level}`;
+                document.getElementById('studentName').textContent = student.full_name;
+                
+                document.getElementById('totalExams').textContent = perf.totalExams;
+                document.getElementById('avgScore').textContent = `${perf.averageScore}%`;
+                document.getElementById('passRate').textContent = `${perf.passRate}%`;
+                
+                const trendText = perf.recentTrend === 'improving' ? '📈 تحسن' : 
+                                  perf.recentTrend === 'declining' ? '📉 تراجع' : '➡️ مستقر';
+                document.getElementById('trend').textContent = trendText;
+
+                document.getElementById('studentInfoCard').classList.remove('d-none');
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        async function loadExams() {
+            try {
+                document.getElementById('loading').classList.remove('d-none');
+
+                exams = await parentService.getStudentExams(studentId);
+
+                document.getElementById('loading').classList.add('d-none');
+
+                if (exams.length === 0) {
+                    document.getElementById('emptyState').classList.remove('d-none');
+                } else {
+                    document.getElementById('examsContainer').classList.remove('d-none');
+                    renderExams();
+                }
+            } catch (error) {
+                handleError(error, 'loadExams');
+                document.getElementById('loading').classList.add('d-none');
+            }
+        }
+
+        function renderExams() {
+            const tbody = document.getElementById('examsTableBody');
+            tbody.innerHTML = '';
+
+            exams.forEach(attempt => {
+                const exam = attempt.exam;
+                const date = new Date(attempt.submitted_at);
+                const formattedDate = date.toLocaleDateString('ar-SA', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+
+                // Determine score badge class
+                let scoreClass = 'score-poor';
+                if (attempt.percentage >= 90) scoreClass = 'score-excellent';
+                else if (attempt.percentage >= 75) scoreClass = 'score-good';
+                else if (attempt.percentage >= 50) scoreClass = 'score-average';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${formattedDate}</td>
+                    <td><strong>${exam.title}</strong></td>
+                    <td>الصف ${exam.grade_level}</td>
+                    <td>${attempt.score} / ${attempt.total_points}</td>
+                    <td>
+                        <span class="score-badge ${scoreClass}">
+                            ${attempt.percentage.toFixed(1)}%
+                        </span>
+                    </td>
+                    <td>
+                        <span class="status-badge ${attempt.passed ? 'status-passed' : 'status-failed'}">
+                            ${attempt.passed ? '✓ ناجح' : '✗ راسب'}
+                        </span>
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

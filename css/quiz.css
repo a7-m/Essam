@@ -1,0 +1,222 @@
+/* =====================================================
+   Quiz-Specific Styles
+   ===================================================== */
+
+/* Ordering Questions */
+.ordering-container {
+  margin-top: 1rem;
+}
+
+.ordering-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background-color: var(--bg-tertiary);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+}
+
+.ordering-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: move;
+  transition: all var(--transition-base);
+}
+
+.ordering-item.dragging {
+  opacity: 0.5;
+  border-color: var(--primary);
+}
+
+.drag-handle {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.item-text {
+  flex: 1;
+}
+
+/* Matching Questions */
+.matching-container {
+  margin-top: 1rem;
+}
+
+.matching-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+  align-items: start;
+}
+
+.matching-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.matching-item-left {
+  padding: var(--spacing-md);
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+}
+
+.matching-select select {
+  width: 100%;
+  min-height: 50px;
+}
+
+/* Fill in the Blank */
+.fill-blank-container {
+  margin-top: 1rem;
+}
+
+.fill-blank-text {
+  font-size: var(--font-size-lg);
+  line-height: 2;
+  padding: var(--spacing-lg);
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.blank-input {
+  display: inline-block;
+  min-width: 150px;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-bottom: 2px solid var(--primary);
+  background-color: transparent;
+  font-size: inherit;
+  text-align: center;
+  margin: 0 0.25rem;
+}
+
+.blank-input:focus {
+  outline: none;
+  border-bottom-color: var(--primary);
+  background-color: rgba(37, 99, 235, 0.05);
+}
+
+/* Drag and Drop Questions */
+.drag-drop-container {
+  margin-top: 1rem;
+}
+
+.drag-drop-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: var(--spacing-md);
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  min-height: 60px;
+}
+
+.draggable-item {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: var(--bg-primary);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-md);
+  cursor: grab;
+  transition: all var(--transition-base);
+  user-select: none;
+}
+
+.draggable-item:active {
+  cursor: grabbing;
+}
+
+.draggable-item.dragging {
+  opacity: 0.5;
+}
+
+.drop-zones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.drop-zone {
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  min-height: 100px;
+  transition: all var(--transition-base);
+}
+
+.drop-zone.drag-over {
+  border-color: var(--primary);
+  background-color: rgba(37, 99, 235, 0.05);
+}
+
+.zone-label {
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.zone-content {
+  min-height: 60px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Question Media */
+.question-media {
+  text-align: center;
+}
+
+.question-media img {
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+/* Question Hint */
+.question-hint {
+  margin-top: var(--spacing-md);
+}
+
+.hint-content {
+  background-color: #fffbeb;
+  border-right: 4px solid #f59e0b;
+  padding: var(--spacing-md);
+  color: #92400e;
+  border-radius: var(--radius-md);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .matching-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .drop-zones {
+    grid-template-columns: 1fr;
+  }
+
+  .blank-input {
+    min-width: 100px;
+  }
+}

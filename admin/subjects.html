@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المواد والوحدات - منصة الأستاذ عصام عبدالمنعم</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="bg-secondary">
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">الأستاذ عصام</div>
+            <nav class="sidebar-nav">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span>📊</span> لوحة التحكم</a></li>
+                <li class="nav-item"><a href="subjects.html" class="nav-link active"><span>📚</span> المواد والوحدات</a></li>
+                <li class="nav-item"><a href="lessons.html" class="nav-link"><span>📝</span> الدروس والملفات</a></li>
+                <li class="nav-item"><a href="homeworks.html" class="nav-link"><span>🏠</span> الواجبات</a></li>
+                <li class="nav-item"><a href="exams.html" class="nav-link"><span>📝</span> الاختبارات</a></li>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-danger btn-block" onclick="authService.signOut()">🚪 تسجيل الخروج</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1>إدارة المواد والوحدات</h1>
+                    <p class="text-secondary">إضافة وتعديل المواد الدراسية والوحدات التابعة لها</p>
+                </div>
+                <button class="btn btn-primary" onclick="openSubjectModal()">➕ إضافة مادة جديدة</button>
+            </header>
+
+            <!-- Subjects Grid -->
+            <div id="subjects-container" class="grid grid-3">
+                <div class="flex-center p-4"><div class="spinner"></div></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/components/modal.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/admin.service.js"></script>
+
+    <script>
+        let currentSubjects = [];
+
+        async function initPage() {
+            try {
+                await authService.requireRole('admin');
+                await loadSubjects();
+            } catch (error) {
+                handleError(error, 'initPage');
+            }
+        }
+
+        async function loadSubjects() {
+            const container = document.getElementById('subjects-container');
+            container.innerHTML = '<div class="flex-center p-4"><div class="spinner"></div></div>';
+            
+            try {
+                currentSubjects = await adminService.getSubjects();
+                renderSubjects();
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-error">فشل تحميل المواد: ${error.message}</div>`;
+            }
+        }
+
+        function renderSubjects() {
+            const container = document.getElementById('subjects-container');
+            if (currentSubjects.length === 0) {
+                container.innerHTML = '<div class="text-center p-4 col-span-3">لا توجد مواد مضافة حالياً.</div>';
+                return;
+            }
+
+            container.innerHTML = currentSubjects.map(subject => `
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>الصف ${subject.grade_level}</span>
+                        <div class="gap-1 d-flex">
+                            <button class="btn btn-sm btn-outline" onclick="openSubjectModal('${subject.id}')">✏️</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteSubject('${subject.id}')">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h3>${subject.name}</h3>
+                        <p class="text-secondary">${subject.description || 'لا يوجد وصف'}</p>
+                        <button class="btn btn-block btn-secondary mt-2" onclick="viewUnits('${subject.id}')">إدارة الوحدات</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openSubjectModal(subjectId = null) {
+            const subject = subjectId ? currentSubjects.find(s => s.id === subjectId) : null;
+            const title = subjectId ? 'تعديل مادة' : 'إضافة مادة جديدة';
+            
+            const content = `
+                <form id="subject-form">
+                    <div class="form-group">
+                        <label class="form-label">اسم المادة</label>
+                        <input type="text" name="name" class="form-control" value="${subject?.name || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">الصف الدراسي</label>
+                        <select name="grade_level" class="form-control" required>
+                            ${[5,6,7,8,9,10,11,12].map(g => `<option value="${g}" ${subject?.grade_level == g ? 'selected' : ''}>الصف ${g}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">وصف (اختياري)</label>
+                        <textarea name="description" class="form-control">${subject?.description || ''}</textarea>
+                    </div>
+                </form>
+            `;
+
+            const footer = `
+                <button class="btn btn-secondary" onclick="closeModal(this.closest('.modal-wrapper'))">إلغاء</button>
+                <button class="btn btn-primary" onclick="saveSubject('${subjectId}')">حفظ</button>
+            `;
+
+            showModal({ title, content, footer });
+        }
+
+        async function saveSubject(id) {
+            const form = document.getElementById('subject-form');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            data.grade_level = parseInt(data.grade_level);
+
+            try {
+                if (id !== 'null' && id !== '') {
+                    await adminService.updateSubject(id, data);
+                    showToast('تم تحديث المادة بنجاح', 'success');
+                } else {
+                    data.created_by = (await authService.getCurrentUser()).id;
+                    await adminService.addSubject(data);
+                    showToast('تمت إضافة المادة بنجاح', 'success');
+                }
+                closeModal(document.querySelector('.modal-wrapper'));
+                loadSubjects();
+            } catch (error) {
+                handleError(error, 'saveSubject');
+            }
+        }
+
+        async function deleteSubject(id) {
+            if (await showConfirm({ message: 'هل أنت متأكد من حذف هذه المادة؟ سيتم حذف جميع الوحدات والدروس التابعة لها.' })) {
+                try {
+                    await adminService.deleteSubject(id);
+                    showToast('تم حذف المادة بنجاح', 'success');
+                    loadSubjects();
+                } catch (error) {
+                    handleError(error, 'deleteSubject');
+                }
+            }
+        }
+
+        async function viewUnits(subjectId) {
+            const subject = currentSubjects.find(s => s.id === subjectId);
+            const units = await adminService.getUnits(subjectId);
+            
+            const title = `وحدات مادة: ${subject.name}`;
+            const content = document.createElement('div');
+            content.innerHTML = `
+                <div class="d-flex justify-content-between mb-3">
+                    <h4>قائمة الوحدات</h4>
+                    <button class="btn btn-sm btn-primary" onclick="openUnitModal('${subjectId}')">➕ إضافة وحدة</button>
+                </div>
+                <div id="units-list">
+                    ${units.length === 0 ? '<p class="text-center">لا توجد وحدات مضافة.</p>' : `
+                        <table class="table" style="width: 100%; border-collapse: collapse">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-color)">
+                                    <th class="text-right p-2">الترتيب</th>
+                                    <th class="text-right p-2">العنوان</th>
+                                    <th class="text-right p-2">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${units.map(u => `
+                                    <tr style="border-bottom: 1px solid var(--border-color)">
+                                        <td class="p-2">${u.order_index}</td>
+                                        <td class="p-2">${u.title}</td>
+                                        <td class="p-2">
+                                            <button class="btn btn-sm btn-outline" onclick="openUnitModal('${subjectId}', '${u.id}')">✏️</button>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteUnit('${u.id}', '${subjectId}')">🗑️</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `}
+                </div>
+            `;
+
+            showModal({ title, content: content, size: 'large' });
+        }
+
+        function openUnitModal(subjectId, unitId = null) {
+            // We need to fetch the unit data if editing
+            const unitPromise = unitId ? adminService.getUnits(subjectId).then(units => units.find(u => u.id === unitId)) : Promise.resolve(null);
+            
+            unitPromise.then(unit => {
+                const title = unitId ? 'تعديل وحدة' : 'إضافة وحدة جديدة';
+                const content = `
+                    <form id="unit-form">
+                        <div class="form-group">
+                            <label class="form-label">عنوان الوحدة</label>
+                            <input type="text" name="title" class="form-control" value="${unit?.title || ''}" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">الترتيب (رقم)</label>
+                            <input type="number" name="order_index" class="form-control" value="${unit?.order_index || 0}" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">وصف (اختياري)</label>
+                            <textarea name="description" class="form-control">${unit?.description || ''}</textarea>
+                        </div>
+                    </form>
+                `;
+
+                const footer = `
+                    <button class="btn btn-secondary" onclick="closeModal(this.closest('.modal-wrapper'))">إلغاء</button>
+                    <button class="btn btn-primary" onclick="saveUnit('${subjectId}', '${unitId}')">حفظ</button>
+                `;
+
+                showModal({ title, content, footer });
+            });
+        }
+
+        async function saveUnit(subjectId, unitId) {
+            const form = document.getElementById('unit-form');
+            const data = Object.fromEntries(new FormData(form).entries());
+            data.order_index = parseInt(data.order_index);
+            data.subject_id = subjectId;
+
+            try {
+                if (unitId !== 'null' && unitId !== '') {
+                    await adminService.updateUnit(unitId, data);
+                    showToast('تم تحديث الوحدة بنجاح', 'success');
+                } else {
+                    await adminService.addUnit(data);
+                    showToast('تمت إضافة الوحدة بنجاح', 'success');
+                }
+                // Close the unit modal
+                const modalWrapper = form.closest('.modal-wrapper');
+                closeModal(modalWrapper);
+                
+                // Refresh units view - this is a bit tricky since we're in a modal
+                // For simplicity, we'll close the units view modal too and re-render
+                const allModals = document.querySelectorAll('.modal-wrapper');
+                allModals.forEach(m => closeModal(m));
+                viewUnits(subjectId);
+            } catch (error) {
+                handleError(error, 'saveUnit');
+            }
+        }
+
+        async function deleteUnit(id, subjectId) {
+            if (await showConfirm({ message: 'هل أنت متأكد من حذف هذه الوحدة؟ سيتم حذف جميع الدروس التابعة لها.' })) {
+                try {
+                    await adminService.deleteUnit(id);
+                    showToast('تم حذف الوحدة بنجاح', 'success');
+                    const allModals = document.querySelectorAll('.modal-wrapper');
+                    allModals.forEach(m => closeModal(m));
+                    viewUnits(subjectId);
+                } catch (error) {
+                    handleError(error, 'deleteUnit');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

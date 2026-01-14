@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="منصة الأستاذ عصام عبدالمنعم التعليمية - معلم اللغة العربية والتربية الإسلامية للصفوف 5-12 وفق منهج سلطنة عُمان"
+    />
+    <meta name="keywords" content="تعليم، عربي، إسلامية، عمان، الأستاذ عصام" />
+    <title>منصة الأستاذ عصام عبدالمنعم التعليمية</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="assets/images/favicon.png" />
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/components.css" />
+
+    <style>
+      .hero {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-align: center;
+        padding: var(--spacing-2xl) var(--spacing-md);
+      }
+
+      .hero-content h1 {
+        font-size: 3rem;
+        margin-bottom: var(--spacing-lg);
+        color: white;
+      }
+
+      .hero-content p {
+        font-size: 1.25rem;
+        margin-bottom: var(--spacing-xl);
+        opacity: 0.95;
+      }
+
+      .hero-buttons {
+        display: flex;
+        gap: var(--spacing-md);
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .hero-buttons .btn {
+        min-width: 150px;
+      }
+
+      .features {
+        padding: var(--spacing-2xl) 0;
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--spacing-xl);
+        margin-top: var(--spacing-xl);
+      }
+
+      .feature-card {
+        text-align: center;
+        padding: var(--spacing-xl);
+        background-color: var(--bg-secondary);
+        border-radius: var(--radius-lg);
+        transition: transform var(--transition-base);
+      }
+
+      .feature-card:hover {
+        transform: translateY(-5px);
+      }
+
+      .feature-icon {
+        font-size: 3rem;
+        margin-bottom: var(--spacing-md);
+      }
+
+      .feature-card h3 {
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .feature-card p {
+        color: var(--text-secondary);
+        margin-bottom: 0;
+      }
+
+      .stats {
+        padding: var(--spacing-2xl) 0;
+        background-color: var(--bg-secondary);
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-xl);
+        text-align: center;
+      }
+
+      .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .stat-label {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+      }
+
+      footer {
+        background-color: var(--bg-tertiary);
+        padding: var(--spacing-2xl) 0;
+        text-align: center;
+        color: var(--text-secondary);
+      }
+
+      @media (max-width: 768px) {
+        .hero-content h1 {
+          font-size: 2rem;
+        }
+
+        .hero-content p {
+          font-size: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-content">
+          <h1>منصة الأستاذ عصام عبدالمنعم التعليمية</h1>
+          <p>
+            معلم اللغة العربية والتربية الإسلامية<br />
+            للصفوف 5 – 6 – 7 – 8 – 9 – 10 – 11 – 12<br />
+            وفق منهج سلطنة عُمان
+          </p>
+          <div class="hero-buttons">
+            <a
+              href="login.html"
+              class="btn btn-lg"
+              style="background-color: white; color: #667eea"
+            >
+              تسجيل الدخول
+            </a>
+            <a
+              href="register-student.html"
+              class="btn btn-lg btn-outline"
+              style="border-color: white; color: white"
+            >
+              إنشاء حساب طالب
+            </a>
+            <a
+              href="register-parent.html"
+              class="btn btn-lg btn-outline"
+              style="border-color: white; color: white"
+            >
+              إنشاء حساب ولي أمر
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+      <div class="container">
+        <h2 class="text-center">مميزات المنصة</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">📚</div>
+            <h3>مكتبة دروس شاملة</h3>
+            <p>دروس منظمة حسب الصف والمادة مع ملفات PDF وفيديوهات تعليمية</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">✍️</div>
+            <h3>اختبارات تفاعلية</h3>
+            <p>اختبارات متنوعة مع تصحيح تلقائي ونتائج فورية</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>تتبع الأداء</h3>
+            <p>متابعة تقدم الطالب وعرض النتائج والتقارير التفصيلية</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">👨‍👩‍👦</div>
+            <h3>حساب ولي الأمر</h3>
+            <p>متابعة نتائج الأبناء والاطلاع على تقاريرهم الدراسية</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <h3>آمن وموثوق</h3>
+            <p>حماية كاملة للبيانات مع نظام مصادقة آمن</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">📱</div>
+            <h3>متوافق مع الجوال</h3>
+            <p>تصميم متجاوب يعمل على جميع الأجهزة</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+      <div class="container">
+        <h2 class="text-center mb-4">إحصائيات المنصة</h2>
+        <div class="stats-grid">
+          <div>
+            <div class="stat-number">8</div>
+            <div class="stat-label">صفوف دراسية</div>
+          </div>
+          <div>
+            <div class="stat-number">2</div>
+            <div class="stat-label">مادة دراسية</div>
+          </div>
+          <div>
+            <div class="stat-number">100%</div>
+            <div class="stat-label">مجاني بالكامل</div>
+          </div>
+          <div>
+            <div class="stat-number">✓</div>
+            <div class="stat-label">منهج سلطنة عُمان</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="container">
+        <p>
+          &copy; 2026 منصة الأستاذ عصام عبدالمنعم التعليمية. جميع الحقوق محفوظة.
+        </p>
+        <p class="mt-2">
+          <a href="login.html">تسجيل الدخول</a> |
+          <a href="register-student.html">تسجيل طالب</a> |
+          <a href="register-parent.html">تسجيل ولي أمر</a>
+        </p>
+      </div>
+    </footer>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- App Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils/errors.js"></script>
+    <script src="js/utils/validation.js"></script>
+    <script src="js/utils/helpers.js"></script>
+    <script src="js/utils/theme.js"></script>
+    <script src="js/components/toast.js"></script>
+  </body>
+</html>

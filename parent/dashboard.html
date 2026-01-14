@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة ولي الأمر - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    
+    <style>
+        .dashboard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .welcome-text {
+            font-size: var(--font-size-2xl);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .students-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+            margin-top: var(--spacing-xl);
+        }
+
+        .student-card {
+            background-color: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            transition: transform var(--transition-base);
+            border: 1px solid var(--border-color);
+        }
+
+        .student-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .student-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .student-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .student-info h3 {
+            margin: 0 0 var(--spacing-xs) 0;
+            color: var(--text-primary);
+        }
+
+        .grade-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+        }
+
+        .performance-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+            margin: var(--spacing-md) 0;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: var(--spacing-md);
+            background-color: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .trend-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: bold;
+        }
+
+        .trend-improving {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .trend-declining {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .trend-stable {
+            background-color: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .add-student-card {
+            border: 2px dashed var(--border-color);
+            background-color: var(--bg-tertiary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            min-height: 250px;
+        }
+
+        .add-student-card:hover {
+            border-color: var(--primary);
+            background-color: var(--bg-secondary);
+        }
+
+        .add-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: var(--spacing-md);
+        }
+    </style>
+</head>
+<body class="bg-secondary">
+    <div class="container py-4">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div class="welcome-text" id="welcomeText">مرحباً بك</div>
+            <p class="mb-0">متابعة أداء أبنائك الأكاديمي</p>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="d-flex gap-2 mb-4 flex-wrap">
+            <button class="btn btn-primary" onclick="showAddStudentModal()">
+                <span>➕</span> إضافة طالب
+            </button>
+            <a href="../index.html" class="btn btn-outline">
+                <span>🏠</span> الصفحة الرئيسية
+            </a>
+            <button class="btn btn-outline" onclick="authService.signOut()">
+                <span>🚪</span> تسجيل الخروج
+            </button>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="text-center py-5">
+            <div class="spinner"></div>
+            <p class="mt-2">جاري التحميل...</p>
+        </div>
+
+        <!-- Students Grid -->
+        <div id="studentsContainer" class="d-none">
+            <h2 class="mb-3">أبنائي الطلاب</h2>
+            <div id="studentsGrid" class="students-grid">
+                <!-- Students will be injected here -->
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="d-none">
+            <div class="empty-state">
+                <div class="empty-state-icon">👨‍👩‍👦</div>
+                <h3>لم يتم ربط أي طالب بعد</h3>
+                <p class="text-secondary mb-4">ابدأ بإضافة طالب لمتابعة أدائه الأكاديمي</p>
+                <button class="btn btn-primary" onclick="showAddStudentModal()">
+                    إضافة طالب الآن
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div id="addStudentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة طالب</h3>
+                <button class="modal-close" onclick="closeAddStudentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary mb-3">أدخل البريد الإلكتروني للطالب لربط الحسابات</p>
+                <form id="addStudentForm">
+                    <div class="form-group">
+                        <label for="studentEmail" class="form-label">البريد الإلكتروني للطالب</label>
+                        <input
+                            type="email"
+                            id="studentEmail"
+                            class="form-control"
+                            placeholder="student@example.com"
+                            required
+                        />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" onclick="closeAddStudentModal()">
+                            إلغاء
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="addStudentBtn">
+                            إضافة
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/components/modal.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/parent.service.js"></script>
+
+    <script>
+        let students = [];
+
+        async function init() {
+            try {
+                // Require parent auth
+                const user = await authService.requireRole('parent', '../login.html');
+                if (!user) return;
+
+                document.getElementById('welcomeText').textContent = `مرحباً ${user.profile.full_name}`;
+
+                await loadStudents();
+            } catch (error) {
+                handleError(error, 'parentDashboard.init');
+            }
+        }
+
+        async function loadStudents() {
+            try {
+                document.getElementById('loading').classList.remove('d-none');
+                document.getElementById('studentsContainer').classList.add('d-none');
+                document.getElementById('emptyState').classList.add('d-none');
+
+                students = await parentService.getLinkedStudents();
+
+                document.getElementById('loading').classList.add('d-none');
+
+                if (students.length === 0) {
+                    document.getElementById('emptyState').classList.remove('d-none');
+                } else {
+                    document.getElementById('studentsContainer').classList.remove('d-none');
+                    renderStudents();
+                }
+            } catch (error) {
+                handleError(error, 'loadStudents');
+                document.getElementById('loading').classList.add('d-none');
+            }
+        }
+
+        async function renderStudents() {
+            const grid = document.getElementById('studentsGrid');
+            grid.innerHTML = '';
+
+            for (const link of students) {
+                const student = link.student;
+                
+                // Get performance data
+                const perf = await parentService.getStudentPerformance(student.id);
+
+                const card = document.createElement('div');
+                card.className = 'student-card';
+                
+                const initials = student.full_name.split(' ').map(n => n[0]).join('').slice(0, 2);
+                const trendClass = perf.recentTrend === 'improving' ? 'trend-improving' : 
+                                   perf.recentTrend === 'declining' ? 'trend-declining' : 'trend-stable';
+                const trendText = perf.recentTrend === 'improving' ? '📈 تحسن' : 
+                                  perf.recentTrend === 'declining' ? '📉 تراجع' : '➡️ مستقر';
+
+                card.innerHTML = `
+                    <div class="student-header">
+                        <div class="student-avatar">${initials}</div>
+                        <div class="student-info">
+                            <h3>${student.full_name}</h3>
+                            <span class="grade-badge">الصف ${student.grade_level}</span>
+                        </div>
+                    </div>
+
+                    <div class="performance-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">${perf.totalExams}</div>
+                            <div class="stat-label">اختبار</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${perf.averageScore}%</div>
+                            <div class="stat-label">المعدل</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${perf.passRate}%</div>
+                            <div class="stat-label">النجاح</div>
+                        </div>
+                        <div class="stat-box">
+                            <span class="trend-badge ${trendClass}">${trendText}</span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3">
+                        <a href="student-results.html?id=${student.id}" class="btn btn-primary btn-sm flex-1">
+                            عرض النتائج
+                        </a>
+                        <button class="btn btn-outline btn-sm" onclick="removeStudent('${link.linkId}')">
+                            إزالة
+                        </button>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            }
+        }
+
+        function showAddStudentModal() {
+            document.getElementById('addStudentModal').classList.add('active');
+        }
+
+        function closeAddStudentModal() {
+            document.getElementById('addStudentModal').classList.remove('active');
+            document.getElementById('addStudentForm').reset();
+        }
+
+        document.getElementById('addStudentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('studentEmail').value;
+            const btn = document.getElementById('addStudentBtn');
+            
+            btn.disabled = true;
+            btn.textContent = 'جاري الإضافة...';
+
+            try {
+                await parentService.requestStudentLink(email);
+                closeAddStudentModal();
+                await loadStudents();
+            } catch (error) {
+                handleError(error, 'addStudent');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'إضافة';
+            }
+        });
+
+        async function removeStudent(linkId) {
+            const removed = await parentService.removeStudentLink(linkId);
+            if (removed) {
+                await loadStudents();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الاختبارات - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/student.css">
+</head>
+<body class="bg-secondary">
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">الأستاذ عصام</div>
+            <nav class="sidebar-nav">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span>📊</span> لوحة التحكم</a></li>
+                <li class="nav-item"><a href="lessons.html" class="nav-link"><span>📝</span> دروسي</a></li>
+                <li class="nav-item"><a href="homeworks.html" class="nav-link"><span>🏠</span> الواجبات</a></li>
+                <li class="nav-item"><a href="exams.html" class="nav-link active"><span>✍️</span> الاختبارات</a></li>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-danger btn-block" onclick="authService.signOut()">🚪 تسجيل الخروج</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1>الاختبارات المتاحة</h1>
+                    <p class="text-secondary">تطلع على الاختبارات المطلوبة ونتائجك السابقة</p>
+                </div>
+            </header>
+
+            <div id="exams-container" class="grid grid-2">
+                <div class="spinner"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/components/modal.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/student.service.js"></script>
+
+    <script>
+        async function initPage() {
+            try {
+                await authService.requireRole('student', '../login.html');
+                loadExams();
+            } catch (error) {
+                handleError(error, 'initPage');
+            }
+        }
+
+        async function loadExams() {
+            const container = document.getElementById('exams-container');
+            container.innerHTML = '<div class="spinner col-span-2"></div>';
+
+            try {
+                const exams = await studentService.getAvailableExams();
+                if (exams.length === 0) {
+                    container.innerHTML = '<div class="card p-5 text-center text-secondary col-span-2">لا توجد اختبارات متاحة لك في الوقت الحالي.</div>';
+                    return;
+                }
+
+                container.innerHTML = exams.map(e => `
+                    <div class="card p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h3 class="mb-1">${e.title}</h3>
+                                <span class="badge badge-primary">${e.subjects?.name}</span>
+                                <span class="badge badge-secondary">${e.duration_minutes} دقيقة</span>
+                            </div>
+                            ${e.is_completed ? 
+                                `<div class="text-center">
+                                    <div class="font-bold text-${e.last_score >= e.passing_score ? 'success' : 'error'}" style="font-size: 1.5rem">${e.last_score}%</div>
+                                    <div class="small text-secondary">آخر نتيجة</div>
+                                </div>` : 
+                                '<span class="badge badge-info">جديد</span>'
+                            }
+                        </div>
+
+                        <ul class="list-unstyled mb-4 small text-secondary">
+                            <li>• عدد المحاولات المستخدمة: ${e.attempts_count} من ${e.max_attempts}</li>
+                            <li>• درجة النجاح: ${e.passing_score}%</li>
+                        </ul>
+
+                        ${e.can_attempt ? 
+                            `<button class="btn btn-primary btn-block" onclick="startExam('${e.id}', '${e.title}')">ابدأ الاختبار</button>` : 
+                            `<button class="btn btn-secondary btn-block" disabled>لقد استنفدت محاولاتك</button>`
+                        }
+                    </div>
+                `).join('');
+            } catch (error) {
+                handleError(error, 'loadExams');
+            }
+        }
+
+        async function startExam(examId, title) {
+            const confirmed = await showConfirm({
+                title: 'بدء الاختبار',
+                message: `هل أنت مستعد لبدء اختبار "${title}"؟<br><br><b>ملاحظة:</b> لا تغلق الصفحة أو تخرج من نافذة الاختبار بمجرد البدء.`,
+                confirmText: 'ابدأ الآن',
+                confirmClass: 'btn-primary'
+            });
+
+            if (confirmed) {
+                window.location.href = `quiz.html?id=${examId}`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

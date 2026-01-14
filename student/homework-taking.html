@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حل الواجب - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/quiz.css">
+    
+    <style>
+        .quiz-container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .quiz-header { position: sticky; top: 0; background: var(--bg-primary); padding: 1rem; border-radius: var(--radius-lg); box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 100; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .question-card { display: none; }
+        .question-card.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        .options-list { list-style: none; margin-top: 1.5rem; }
+        .option-item { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 0.5rem; cursor: pointer; transition: all 0.2s; display: flex; gap: 1rem; align-items: center; }
+        .option-item:hover { background-color: var(--bg-tertiary); }
+        .option-item.selected { border-color: var(--primary); background-color: rgba(37, 99, 235, 0.05); }
+        .quiz-footer { margin-top: 3rem; display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid var(--border-color); }
+        .question-nav { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+        .nav-dot { width: 35px; height: 35px; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem; }
+        .nav-dot.completed { background-color: var(--success); color: white; border-color: var(--success); }
+        .nav-dot.active { border: 2px solid var(--primary); font-weight: bold; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-secondary">
+    <div id="quiz-app" class="quiz-container">
+        <!-- Loading -->
+        <div id="loading-view" class="text-center p-5">
+            <div class="spinner"></div>
+            <p class="mt-2">جاري تحميل الواجب...</p>
+        </div>
+
+        <!-- Quiz Interface -->
+        <div id="quiz-view" class="d-none">
+            <header class="quiz-header">
+                <div>
+                    <h2 id="exam-title-display" class="h4 mb-0">اسم الواجب</h2>
+                    <span id="question-progress" class="small text-secondary">السؤال 1 من 10</span>
+                </div>
+                <div>واجب منزلي</div>
+            </header>
+
+            <div class="question-nav" id="question-nav-container"></div>
+
+            <div id="questions-container">
+                <!-- Question cards injected here -->
+            </div>
+
+            <footer class="quiz-footer">
+                <button class="btn btn-secondary" id="btn-prev" onclick="changeQuestion(-1)">السابق</button>
+                <div class="gap-2 d-flex">
+                    <button class="btn btn-primary" id="btn-next" onclick="changeQuestion(1)">التالي</button>
+                    <button class="btn btn-success d-none" id="btn-submit" onclick="handleSubmit()">تسليم الواجب</button>
+                </div>
+            </footer>
+        </div>
+
+        <!-- Result View -->
+        <div id="result-view" class="d-none card p-5 text-center">
+            <h1 id="result-title">تم التسليم!</h1>
+            <div class="my-4">
+                <div style="font-size: 4rem">🎉</div>
+                <div class="h1 font-bold text-primary mt-2" id="result-score">0%</div>
+                <p class="h4 text-secondary">تم تسليم الواجب بنجاح</p>
+            </div>
+            <div class="grid grid-2 bg-tertiary p-3 rounded mb-4">
+                <div>
+                    <div class="small text-secondary">النقاط</div>
+                    <div class="font-bold" id="result-points">0 / 0</div>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="window.location.href='homeworks.html'">العودة لقائمة الواجبات</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/components/modal.js"></script>
+    <script src="../js/components/quiz-renderer.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/student.service.js"></script>
+
+    <script>
+        let attemptData = null;
+        let questions = [];
+        let answers = {};
+        let currentIndex = 0;
+
+        async function initHomework() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const homeworkId = urlParams.get('id');
+            if (!homeworkId) {
+                window.location.href = 'homeworks.html';
+                return;
+            }
+
+            try {
+                await authService.requireRole('student', '../login.html');
+                
+                const result = await studentService.startHomework(homeworkId);
+                attemptData = result.attempt;
+                questions = result.questions;
+
+                // Hack: Fetch homework details if not in result?
+                // Actually startHomework returns attempt but not title?
+                // attemptData might have homework relation expansion? No.
+                // We'll set a generic title or fetch it.
+                // Let's assume title is not critical or fetch it properly.
+                // Assuming we can get title from questions if empty, or just "Homework".
+                document.getElementById('exam-title-display').textContent = 'حل الواجب';
+
+                setupQuizUI();
+
+                document.getElementById('loading-view').classList.add('d-none');
+                document.getElementById('quiz-view').classList.remove('d-none');
+            } catch (error) {
+                handleError(error, 'initHomework');
+            }
+        }
+
+        function setupQuizUI() {
+            const container = document.getElementById('questions-container');
+            const nav = document.getElementById('question-nav-container');
+
+            window.__quizAnswers = {};
+
+            questions.forEach((q, i) => {
+                const card = quizRenderer.renderQuestion(q, i, (questionId, value, index) => {
+                    window.__quizAnswers[questionId] = value;
+                    answers[questionId] = value;
+                    
+                    const dot = document.getElementById(`nav-dot-${index}`);
+                    if (dot) dot.classList.add('completed');
+                });
+                
+                container.appendChild(card);
+
+                const dot = document.createElement('div');
+                dot.className = `nav-dot ${i === 0 ? 'active' : ''}`;
+                dot.id = `nav-dot-${i}`;
+                dot.textContent = i + 1;
+                dot.onclick = () => goToQuestion(i);
+                nav.appendChild(dot);
+            });
+
+            updateNavButtons();
+        }
+
+        function goToQuestion(idx) {
+            document.querySelectorAll('.question-card').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.nav-dot').forEach(d => d.classList.remove('active'));
+            
+            document.getElementById(`q-card-${idx}`).classList.add('active');
+            document.getElementById(`nav-dot-${idx}`).classList.add('active');
+            
+            currentIndex = idx;
+            document.getElementById('question-progress').textContent = `السؤال ${idx + 1} من ${questions.length}`;
+            updateNavButtons();
+        }
+
+        function changeQuestion(delta) {
+            const newIdx = currentIndex + delta;
+            if (newIdx >= 0 && newIdx < questions.length) {
+                goToQuestion(newIdx);
+            }
+        }
+
+        function updateNavButtons() {
+            document.getElementById('btn-prev').disabled = (currentIndex === 0);
+            
+            const btnNext = document.getElementById('btn-next');
+            const btnSubmit = document.getElementById('btn-submit');
+            
+            if (currentIndex === questions.length - 1) {
+                btnNext.classList.add('d-none');
+                btnSubmit.classList.remove('d-none');
+            } else {
+                btnNext.classList.remove('d-none');
+                btnSubmit.classList.add('d-none');
+            }
+        }
+
+        async function handleSubmit() {
+            const unanswered = questions.length - Object.keys(answers).length;
+            let msg = 'هل أنت متأكد من تسليم الواجب؟';
+            if (unanswered > 0) {
+                msg = `لديك ${unanswered} سؤالاً بدون إجابة. هل تريد التسليم على أي حال؟`;
+            }
+
+            const confirmed = await showConfirm({
+                title: 'تسليم الواجب',
+                message: msg,
+                confirmText: 'تسليم',
+                confirmClass: 'btn-success'
+            });
+
+            if (confirmed) {
+                submitHomework();
+            }
+        }
+
+        async function submitHomework() {
+            document.getElementById('quiz-view').classList.add('d-none');
+            document.getElementById('loading-view').classList.remove('d-none');
+            document.getElementById('loading-view').querySelector('p').textContent = 'جاري التسليم...';
+
+            try {
+                const result = await studentService.submitHomework(attemptData.id, answers);
+                
+                // Show local result primarily, or handle grading display
+                // The submit return value should have the updated attempt with score if auto-graded
+                // But submitHomework in updated service returns the data.
+                
+                showResult(result);
+            } catch (error) {
+                handleError(error, 'submitHomework');
+            }
+        }
+
+        function showResult(r) {
+            document.getElementById('loading-view').classList.add('d-none');
+            document.getElementById('result-view').classList.remove('d-none');
+
+            // r would be the attempt record.
+            // If auto-graded immediately, it has score/percentage.
+            if(r.is_graded) {
+                document.getElementById('result-score').textContent = `${r.percentage}%`;
+                document.getElementById('result-points').textContent = `${r.score} / ${r.total_points}`;
+            } else {
+                document.getElementById('result-score').textContent = 'تم التسليم';
+                document.getElementById('result-points').textContent = 'في انتظار التصحيح';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initHomework);
+    </script>
+</body>
+</html>

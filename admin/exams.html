@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الاختبارات - منصة الأستاذ عصام عبدالمنعم</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="bg-secondary">
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">الأستاذ عصام</div>
+            <nav class="sidebar-nav">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span>📊</span> لوحة التحكم</a></li>
+                <li class="nav-item"><a href="subjects.html" class="nav-link"><span>📚</span> المواد والوحدات</a></li>
+                <li class="nav-item"><a href="lessons.html" class="nav-link"><span>📝</span> الدروس والملفات</a></li>
+                <li class="nav-item"><a href="homeworks.html" class="nav-link"><span>🏠</span> الواجبات</a></li>
+                <li class="nav-item"><a href="exams.html" class="nav-link active"><span>📝</span> الاختبارات</a></li>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-danger btn-block" onclick="authService.signOut()">🚪 تسجيل الخروج</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1>إدارة الاختبارات</h1>
+                    <p class="text-secondary">إنشاء وتعديل ونشر الاختبارات للطلاب</p>
+                </div>
+                <button class="btn btn-primary" onclick="openCreateExamModal()">➕ إنشاء اختبار جديد</button>
+            </header>
+
+            <!-- Exams List -->
+            <div id="exams-container">
+                <div class="flex-center p-4"><div class="spinner"></div></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/components/modal.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/admin.service.js"></script>
+
+    <script>
+        let subjects = [];
+        let allExams = [];
+        let newExamQuestions = []; // Temporary storage for questions being added
+
+        async function initPage() {
+            try {
+                await authService.requireRole('admin');
+                subjects = await adminService.getSubjects();
+                loadExams();
+            } catch (error) {
+                handleError(error, 'initPage');
+            }
+        }
+
+        async function loadExams() {
+            const container = document.getElementById('exams-container');
+            container.innerHTML = '<div class="flex-center p-4"><div class="spinner"></div></div>';
+            
+            try {
+                allExams = await adminService.getExams();
+                renderExams();
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-error">فشل تحميل الاختبارات: ${error.message}</div>`;
+            }
+        }
+
+        function renderExams() {
+            const container = document.getElementById('exams-container');
+            if (allExams.length === 0) {
+                container.innerHTML = '<div class="card p-4 text-center">لا توجد اختبارات مضافة حالياً.</div>';
+                return;
+            }
+
+            container.innerHTML = allExams.map(exam => `
+                <div class="card mb-3">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3>${exam.title}</h3>
+                            <div class="mt-1">
+                                <span class="badge badge-primary">${exam.subjects?.name || 'غير محدد'}</span>
+                                <span class="badge badge-secondary">الصف ${exam.grade_level}</span>
+                                <span class="badge badge-info">${exam.duration_minutes} دقيقة</span>
+                                <span class="badge ${exam.is_published ? 'badge-success' : 'badge-warning'}">
+                                    ${exam.is_published ? 'منشور' : 'مسودة'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="gap-2 d-flex">
+                            <button class="btn btn-outline" onclick="deleteExam('${exam.id}')">🗑️ حذف</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function openCreateExamModal() {
+            newExamQuestions = []; // Reset
+            const title = 'إنشاء اختبار جديد';
+            const content = document.createElement('div');
+            content.innerHTML = `
+                <form id="exam-form">
+                    <div class="form-group">
+                        <label class="form-label">العنوان</label>
+                        <input type="text" name="title" class="form-control" placeholder="مثلاً: اختبار الوحدة الأولى" required>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-group">
+                                <label class="form-label">المادة</label>
+                                <select name="subject_id" class="form-control" required>
+                                    <option value="">-- اختر المادة --</option>
+                                    ${subjects.map(s => `<option value="${s.id}">${s.name} (الصف ${s.grade_level})</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-group">
+                                <label class="form-label">الصف</label>
+                                <select name="grade_level" class="form-control" required>
+                                    ${[5,6,7,8,9,10,11,12].map(g => `<option value="${g}">الصف ${g}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-group">
+                                <label class="form-label">المدة (بالدقائق)</label>
+                                <input type="number" name="duration_minutes" class="form-control" value="30" required>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-group">
+                                <label class="form-label">أقصى عدد محاولات</label>
+                                <input type="number" name="max_attempts" class="form-control" value="1" required>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-group">
+                                <label class="form-label">درجة النجاح (%)</label>
+                                <input type="number" name="passing_score" class="form-control" value="50" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_published" id="is_published">
+                        <label for="is_published">نشر الاختبار فوراً</label>
+                    </div>
+
+                    <hr class="my-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h4>الأسئلة</h4>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openAddQuestionUI()">➕ إضافة سؤال</button>
+                    </div>
+                    <div id="added-questions-list" class="p-3 border rounded bg-light" style="min-height: 100px;">
+                        <p class="text-secondary text-center">لم تتم إضافة أسئلة بعد</p>
+                    </div>
+                </form>
+            `;
+
+            const footer = `
+                <button class="btn btn-secondary" onclick="closeModal(this.closest('.modal-wrapper'))">إلغاء</button>
+                <button class="btn btn-primary" onclick="handleCreateExam()">حفظ وإنشاء</button>
+            `;
+
+            showModal({ title, content, footer, size: 'large' });
+        }
+
+        function openAddQuestionUI() {
+            // This could be a nested modal or a collapsible section. 
+            // For simplicity, let's use a nested simplified UI or replace the modal content temporarily?
+            // Better: Just append a form to the question list area to fill out.
+            
+            const container = document.getElementById('added-questions-list');
+            if(container.querySelector('#new-question-form')) return; // Already open
+
+            const formDiv = document.createElement('div');
+            formDiv.id = 'new-question-form';
+            formDiv.className = 'card p-3 mb-3 border-primary';
+            formDiv.innerHTML = `
+                <h5>سؤال جديد</h5>
+                <div class="form-group">
+                    <label class="form-label">نص السؤال</label>
+                    <textarea id="nq-text" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="row">
+                    <div class="col">
+                         <div class="form-group">
+                            <label class="form-label">النوع</label>
+                            <select id="nq-type" class="form-control" onchange="updateNewQuestionOptions(this.value)">
+                                <option value="mcq">اختيار من متعدد</option>
+                                <option value="true_false">صح/خطأ</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
+                         <div class="form-group">
+                            <label class="form-label">النقاط</label>
+                            <input type="number" id="nq-points" class="form-control" value="1">
+                        </div>
+                    </div>
+                </div>
+                <div id="nq-options-area" class="mb-3">
+                    <!-- Dynamic options -->
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="this.closest('#new-question-form').remove()">إلغاء</button>
+                    <button type="button" class="btn btn-sm btn-success" onclick="confirmAddQuestion()">إضافة</button>
+                </div>
+            `;
+            
+            // Clear "No questions" text if it's there
+            if(newExamQuestions.length === 0) container.innerHTML = '';
+            
+            container.appendChild(formDiv);
+            updateNewQuestionOptions('mcq'); // Init
+        }
+
+        function updateNewQuestionOptions(type) {
+            const area = document.getElementById('nq-options-area');
+            if (type === 'mcq') {
+                area.innerHTML = `
+                    <label class="form-label">الخيارات (حدد الصحيح)</label>
+                    <div class="d-flex gap-2 mb-1"><input type="radio" name="nq-correct" value="0" checked><input type="text" class="form-control form-control-sm nq-opt" placeholder="خيار 1"></div>
+                    <div class="d-flex gap-2 mb-1"><input type="radio" name="nq-correct" value="1"><input type="text" class="form-control form-control-sm nq-opt" placeholder="خيار 2"></div>
+                    <div class="d-flex gap-2 mb-1"><input type="radio" name="nq-correct" value="2"><input type="text" class="form-control form-control-sm nq-opt" placeholder="خيار 3"></div>
+                    <div class="d-flex gap-2 mb-1"><input type="radio" name="nq-correct" value="3"><input type="text" class="form-control form-control-sm nq-opt" placeholder="خيار 4"></div>
+                `;
+            } else {
+                area.innerHTML = `
+                    <label class="form-label">الإجابة الصحيحة</label>
+                    <div class="d-flex gap-4">
+                        <label><input type="radio" name="nq-correct-tf" value="true" checked> صح</label>
+                        <label><input type="radio" name="nq-correct-tf" value="false"> خطأ</label>
+                    </div>
+                `;
+            }
+        }
+
+        function confirmAddQuestion() {
+            const text = document.getElementById('nq-text').value;
+            const type = document.getElementById('nq-type').value;
+            const points = parseInt(document.getElementById('nq-points').value) || 1;
+
+            if (!text) { showToast('أدخل نص السؤال', 'error'); return; }
+
+            let question = {
+                question_text: text,
+                question_type: type,
+                points: points
+            };
+
+            if (type === 'mcq') {
+                const optInputs = document.querySelectorAll('.nq-opt');
+                const options = Array.from(optInputs).map(i => i.value);
+                if (options.some(o => !o)) { showToast('أدخل جميع الخيارات', 'error'); return; }
+                
+                const correctIdx = document.querySelector('input[name="nq-correct"]:checked').value;
+                question.options = options;
+                question.correct_answer = options[correctIdx];
+            } else {
+                question.options = ['true', 'false'];
+                question.correct_answer = document.querySelector('input[name="nq-correct-tf"]:checked').value;
+            }
+
+            newExamQuestions.push(question);
+            renderAddedQuestions();
+        }
+
+        function renderAddedQuestions() {
+            const container = document.getElementById('added-questions-list');
+            if (newExamQuestions.length === 0) {
+                container.innerHTML = '<p class="text-secondary text-center">لم تتم إضافة أسئلة بعد</p>';
+                return;
+            }
+
+            container.innerHTML = newExamQuestions.map((q, i) => `
+                <div class="card p-2 mb-2 bg-white">
+                    <div class="d-flex justify-content-between">
+                        <strong>${i+1}. ${q.question_text}</strong>
+                        <button type="button" class="btn btn-sm text-danger" onclick="removeNewQuestion(${i})">❌</button>
+                    </div>
+                    <div class="small text-secondary mt-1">
+                        ${q.question_type === 'mcq' ? 'اختياري' : 'صح/خطأ'} - ${q.points} نقاط
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function removeNewQuestion(index) {
+            newExamQuestions.splice(index, 1);
+            renderAddedQuestions();
+        }
+
+        async function handleCreateExam() {
+            const form = document.getElementById('exam-form');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            const formData = new FormData(form);
+            const rawData = Object.fromEntries(formData.entries());
+            
+            if (newExamQuestions.length === 0) {
+                showToast('يجب إضافة سؤال واحد على الأقل', 'error');
+                return;
+            }
+
+            const examData = {
+                title: rawData.title,
+                subject_id: rawData.subject_id,
+                grade_level: parseInt(rawData.grade_level),
+                duration_minutes: parseInt(rawData.duration_minutes),
+                max_attempts: parseInt(rawData.max_attempts),
+                passing_score: parseInt(rawData.passing_score),
+                is_published: form.querySelector('#is_published').checked,
+                created_by: (await authService.getCurrentUser()).id
+            };
+
+            try {
+                // Pass questions array directly
+                await adminService.createExam(examData, newExamQuestions);
+                showToast('تم إنشاء الاختبار بنجاح', 'success');
+                closeModal(form.closest('.modal-wrapper'));
+                loadExams();
+            } catch (error) {
+                handleError(error, 'handleCreateExam');
+            }
+        }
+
+        async function deleteExam(id) {
+            if (await showConfirm({ message: 'هل أنت متأكد من حذف هذا الاختبار؟ سيتم حذف جميع الأسئلة المرتبطة به.' })) {
+                try {
+                    await adminService.deleteExam(id);
+                    showToast('تم حذف الاختبار بنجاح', 'success');
+                    loadExams();
+                } catch (error) {
+                    handleError(error, 'deleteExam');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

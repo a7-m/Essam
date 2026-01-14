@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التحليلات - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .stat-card {
+            background-color: var(--bg-secondary);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: var(--spacing-sm) 0;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        .chart-container {
+            background-color: var(--bg-secondary);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .exams-list {
+            background-color: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: var(--bg-tertiary);
+            padding: var(--spacing-md);
+            text-align: right;
+            font-weight: 600;
+        }
+
+        td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body class="bg-secondary">
+    <div class="container py-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>تحليلات الأداء</h1>
+            <div class="d-flex gap-2">
+                <a href="dashboard.html" class="btn btn-outline">← لوحة التحكم</a>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="text-center py-5">
+            <div class="spinner"></div>
+            <p class="mt-2">جاري تحميل البيانات...</p>
+        </div>
+
+        <!-- Analytics Content -->
+        <div id="analyticsContent" class="d-none">
+            <!-- Overall Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">إجمالي الاختبارات</div>
+                    <div class="stat-value" id="totalExams">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">إجمالي المحاولات</div>
+                    <div class="stat-value" id="totalAttempts">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">المعدل العام</div>
+                    <div class="stat-value" id="overallAvg">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">نسبة النجاح</div>
+                    <div class="stat-value" id="overallPassRate">0%</div>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="chart-container">
+                <h3 class="mb-3">توزيع الدرجات</h3>
+                <canvas id="scoresChart"></canvas>
+            </div>
+
+            <!-- Exams List -->
+            <div class="exams-list">
+                <h3 class="p-3 mb-0">تفاصيل الاختبارات</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>الاختبار</th>
+                            <th>الصف</th>
+                            <th>المحاولات</th>
+                            <th>المعدل</th>
+                            <th>نسبة النجاح</th>
+                        </tr>
+                    </thead>
+                    <tbody id="examsTableBody">
+                        <!-- Exams will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/analytics.service.js"></script>
+
+    <script>
+        let examsData = [];
+        let scoresChart = null;
+
+        async function init() {
+            try {
+                await authService.requireRole('admin', '../login.html');
+                await loadAnalytics();
+            } catch (error) {
+                handleError(error, 'analytics.init');
+            }
+        }
+
+        async function loadAnalytics() {
+            try {
+                document.getElementById('loading').classList.remove('d-none');
+                document.getElementById('analyticsContent').classList.add('d-none');
+
+                // Get all exams with statistics
+                examsData = await analyticsService.getAllExamsOverview();
+
+                // Calculate overall statistics
+                const totalExams = examsData.length;
+                const totalAttempts = examsData.reduce((sum, e) => sum + e.totalAttempts, 0);
+                const overallAvg = totalAttempts > 0 
+                    ? examsData.reduce((sum, e) => sum + (e.averageScore * e.totalAttempts), 0) / totalAttempts
+                    : 0;
+                const overallPassRate = totalAttempts > 0
+                    ? examsData.reduce((sum, e) => sum + (e.passRate * e.totalAttempts), 0) / totalAttempts
+                    : 0;
+
+                // Update UI
+                document.getElementById('totalExams').textContent = totalExams;
+                document.getElementById('totalAttempts').textContent = totalAttempts;
+                document.getElementById('overallAvg').textContent = `${overallAvg.toFixed(1)}%`;
+                document.getElementById('overallPassRate').textContent = `${overallPassRate.toFixed(1)}%`;
+
+                renderExamsTable();
+                renderChart();
+
+                document.getElementById('loading').classList.add('d-none');
+                document.getElementById('analyticsContent').classList.remove('d-none');
+            } catch (error) {
+                handleError(error, 'loadAnalytics');
+                document.getElementById('loading').classList.add('d-none');
+            }
+        }
+
+        function renderExamsTable() {
+            const tbody = document.getElementById('examsTableBody');
+            tbody.innerHTML = '';
+
+            if (examsData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">لا توجد بيانات</td></tr>';
+                return;
+            }
+
+            examsData.forEach(exam => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${exam.title}</strong></td>
+                    <td>الصف ${exam.grade_level}</td>
+                    <td>${exam.totalAttempts}</td>
+                    <td>${exam.averageScore.toFixed(1)}%</td>
+                    <td>${exam.passRate.toFixed(1)}%</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('scoresChart');
+            
+            // Prepare data - group by score ranges
+            const ranges = {
+                '0-50': 0,
+                '50-60': 0,
+                '60-70': 0,
+                '70-80': 0,
+                '80-90': 0,
+                '90-100': 0
+            };
+
+            examsData.forEach(exam => {
+                const score = exam.averageScore;
+                if (score < 50) ranges['0-50']++;
+                else if (score < 60) ranges['50-60']++;
+                else if (score < 70) ranges['60-70']++;
+                else if (score < 80) ranges['70-80']++;
+                else if (score < 90) ranges['80-90']++;
+                else ranges['90-100']++;
+            });
+
+            if (scoresChart) {
+                scoresChart.destroy();
+            }
+
+            scoresChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(ranges),
+                    datasets: [{
+                        label: 'عدد الاختبارات',
+                        data: Object.values(ranges),
+                        backgroundColor: 'rgba(37, 99, 235, 0.6)',
+                        borderColor: 'rgba(37, 99, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

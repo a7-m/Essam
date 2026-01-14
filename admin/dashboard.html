@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - منصة الأستاذ عصام عبدالمنعم</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="bg-secondary">
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                الأستاذ عصام
+            </div>
+            <nav class="sidebar-nav">
+                <li class="nav-item">
+                    <a href="dashboard.html" class="nav-link active">
+                        <span>📊</span> لوحة التحكم
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="subjects.html" class="nav-link">
+                        <span>📚</span> المواد والوحدات
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="lessons.html" class="nav-link">
+                        <span>📝</span> الدروس والملفات
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="homeworks.html" class="nav-link">
+                        <span>🏠</span> الواجبات
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="exams.html" class="nav-link">
+                        <span>📝</span> الاختبارات
+                    </a>
+                </li>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-danger btn-block" onclick="authService.signOut()">
+                    🚪 تسجيل الخروج
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1>لوحة التحـكم</h1>
+                    <p class="text-secondary">مرحباً بك، أستاذ عصام عبدالمنعم</p>
+                </div>
+            </header>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="count-students">-</div>
+                        <div class="stat-label">إجمالي الطلاب</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📚</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="count-subjects">-</div>
+                        <div class="stat-label">المواد الدراسية</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📝</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="count-lessons">-</div>
+                        <div class="stat-label">الدروس المنشورة</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✍️</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="count-exams">-</div>
+                        <div class="stat-label">الاختبارات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <section class="mt-4">
+                <h3>إجراءات سريعة</h3>
+                <div class="grid grid-3 mt-2">
+                    <a href="subjects.html" class="card p-3 text-center">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem">➕</div>
+                        <h4>إضافة مادة جديدة</h4>
+                    </a>
+                    <a href="lessons.html" class="card p-3 text-center">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem">📄</div>
+                        <h4>رفع درس جديد</h4>
+                    </a>
+                    <a href="exams.html" class="card p-3 text-center">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem">✏️</div>
+                        <h4>إنشاء اختبار</h4>
+                    </a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/validation.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/admin.service.js"></script>
+
+    <script>
+        async function initDashboard() {
+            try {
+                // Require Admin Role
+                const user = await authService.requireRole('admin');
+                if (!user) return;
+
+                // Load Stats
+                const stats = await adminService.getDashboardStats();
+                document.getElementById('count-students').textContent = stats.students;
+                document.getElementById('count-subjects').textContent = stats.subjects;
+                document.getElementById('count-lessons').textContent = stats.lessons;
+                document.getElementById('count-exams').textContent = stats.exams;
+                
+            } catch (error) {
+                handleError(error, 'initDashboard');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>

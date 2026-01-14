@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الواجبات - منصة الأستاذ عصام عبدالمنعم</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="bg-secondary">
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">الأستاذ عصام</div>
+            <nav class="sidebar-nav">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link"><span>📊</span> لوحة التحكم</a></li>
+                <li class="nav-item"><a href="subjects.html" class="nav-link"><span>📚</span> المواد والوحدات</a></li>
+                <li class="nav-item"><a href="lessons.html" class="nav-link"><span>📝</span> الدروس والملفات</a></li>
+                <li class="nav-item"><a href="homeworks.html" class="nav-link active"><span>🏠</span> الواجبات</a></li>
+                <li class="nav-item"><a href="exams.html" class="nav-link"><span>📝</span> الاختبارات</a></li>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-danger btn-block" onclick="authService.signOut()">🚪 تسجيل الخروج</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1>إدارة الواجبات</h1>
+                    <p class="text-secondary">إنشاء وتعيين الواجبات المنزلية</p>
+                </div>
+                <button class="btn btn-primary" onclick="openCreateHomeworkModal()">➕ إضافة واجب جديد</button>
+            </header>
+
+            <!-- Homeworks List -->
+            <div id="homeworks-container">
+                <div class="flex-center p-4"><div class="spinner"></div></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/components/modal.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/admin.service.js"></script>
+
+    <script>
+        let subjects = [];
+        let allHomeworks = [];
+        let newHomeworkQuestions = [];
+
+        async function initPage() {
+            try {
+                await authService.requireRole('admin');
+                subjects = await adminService.getSubjects();
+                loadHomeworks();
+            } catch (error) {
+                handleError(error, 'initPage');
+            }
+        }
+
+        async function loadHomeworks() {
+            const container = document.getElementById('homeworks-container');
+            container.innerHTML = '<div class="flex-center p-4"><div class="spinner"></div></div>';
+            
+            try {
+                allHomeworks = await adminService.getHomeworks();
+                renderHomeworks();
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-error">فشل تحميل الواجبات: ${error.message}</div>`;
+            }
+        }
+
+        function renderHomeworks() {
+            const container = document.getElementById('homeworks-container');
+            if (allHomeworks.length === 0) {
+                container.innerHTML = '<div class="card p-4 text-center">لا توجد واجبات مضافة حالياً.</div>';
+                return;
+            }
+
+            container.innerHTML = allHomeworks.map(hw => `
+                <div class="card mb-3">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3>${hw.title}</h3>
+                            <div class="mt-1">
+                                <span class="badge badge-primary">${hw.subjects?.name || 'غير محدد'}</span>
+                                <span class="badge badge-secondary">الصف ${hw.grade_level}</span>
+                                <span class="badge ${hw.is_published ? 'badge-success' : 'badge-warning'}">
+                                    ${hw.is_published ? 'منشور' : 'مسودة'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="gap-2 d-flex">
+                            <button class="btn btn-outline" onclick="deleteHomework('${hw.id}')">🗑️ حذف</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function openCreateHomeworkModal() {
+            newHomeworkQuestions = [];
+            const title = 'إضافة واجب جديد';
+            const content = document.createElement('div');
+            content.innerHTML = `
+                <form id="homework-form">
+                    <div class="form-group">
+                        <label class="form-label">العنوان</label>
+                        <input type="text" name="title" class="form-control" placeholder="مثلاً: واجب الوحدة الأولى" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">الوصف (اختياري)</label>
+                        <textarea name="description" class="form-control"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-group">
+                                <label class="form-label">المادة</label>
+                                <select name="subject_id" class="form-control" onchange="updateUnits(this.value)" required>
+                                    <option value="">-- اختر المادة --</option>
+                                    ${subjects.map(s => `<option value="${s.id}">${s.name} (الصف ${s.grade_level})</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-group">
+                                <label class="form-label">الوحدة (اختياري)</label>
+                                <select name="unit_id" id="modal_unit_id" class="form-control">
+                                    <option value="">-- عام للمادة --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                             <div class="form-group">
+                                <label class="form-label">الصف</label>
+                                <select name="grade_level" class="form-control" required>
+                                    ${[5,6,7,8,9,10,11,12].map(g => `<option value="${g}">الصف ${g}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_published" id="is_published">
+                        <label for="is_published">نشر الواجب فوراً</label>
+                    </div>
+
+                    <hr class="my-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h4>الأسئلة</h4>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openAddQuestionUI()">➕ إضافة سؤال</button>
+                    </div>
+                    <div id="added-questions-list" class="p-3 border rounded bg-light" style="min-height: 100px;">
+                        <p class="text-secondary text-center">لم تتم إضافة أسئلة بعد</p>
+                    </div>
+                </form>
+            `;
+
+            const footer = `
+                <button class="btn btn-secondary" onclick="closeModal(this.closest('.modal-wrapper'))">إلغاء</button>
+                <button class="btn btn-primary" onclick="handleCreateHomework()">حفظ وإنشاء</button>
+            `;
+
+            showModal({ title, content, footer, size: 'large' });
+        }
+
+        async function updateUnits(subjectId) {
+            const unitSelect = document.getElementById('modal_unit_id');
+            if (!subjectId) {
+                unitSelect.innerHTML = '<option value="">-- عام للمادة --</option>';
+                return;
+            }
+            try {
+                const units = await adminService.getUnits(subjectId);
+                unitSelect.innerHTML = '<option value="">-- عام للمادة --</option>' + 
+                    units.map(u => `<option value="${u.id}">${u.title}</option>`).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        function openAddQuestionUI() {
+            const container = document.getElementById('added-questions-list');
+            if(container.querySelector('#new-question-form')) return; 
+
+            const formDiv = document.createElement('div');
+            formDiv.id = 'new-question-form';
+            formDiv.className = 'card p-3 mb-3 border-primary';
+            formDiv.innerHTML = `
+                <h5>سؤال جديد</h5>
+                <div class="form-group">
+                    <label class="form-label">نص السؤال</label>
+                    <textarea id="nq-text" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="row">
+                    <div class="col">
+                         <div class="form-group">
+                            <label class="form-label">النوع</label>
+                            <select id="nq-type" class="form-control" onchange="updateNewQuestionOptions(this.value)">
+                                <option value="mcq">اختيار من متعدد</option>
+                                <option value="true_false">صح/خطأ</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
+                         <div class="form-group">
+                            <label class="form-label">النقاط</label>
+                            <input type="number" id="nq-points" class="form-control" value="1">
+                        </div>
+                    </div>
+                </div>
+                <div id="nq-options-area" class="mb-3">
+                    <!-- Dynamic options -->
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="this.closest('#new-question-form').remove()">إلغاء</button>
+                    <button type="button" class="btn btn-sm btn-success" onclick="confirmAddQuestion()">إضافة</button>
+                </div>
+            `;
+            
+            if(newHomeworkQuestions.length === 0) container.innerHTML = '';
+            container.appendChild(formDiv);
+            updateNewQuestionOptions('mcq');
+        }
+
+        function updateNewQuestionOptions(type) {
+            const area = document.getElementById('nq-options-area');
+            if (type === 'mcq') {
+                area.innerHTML = `
+                    <label class="form-label">الخيارات (حدد الصحيح)</label>
+                    <div class="d-flex gap-2 mb-1"><input type="radio" name="nq-correct" value="0" checked><input type="text" class="form-control form-control-sm nq-opt" placeholder="خيار 1"></div>
+                    <div class="d-flex gap-2 mb-1"><input type="radio" name="nq-correct" value="1"><input type="text" class="form-control form-control-sm nq-opt" placeholder="خيار 2"></div>
+                    <div class="d-flex gap-2 mb-1"><input type="radio" name="nq-correct" value="2"><input type="text" class="form-control form-control-sm nq-opt" placeholder="خيار 3"></div>
+                    <div class="d-flex gap-2 mb-1"><input type="radio" name="nq-correct" value="3"><input type="text" class="form-control form-control-sm nq-opt" placeholder="خيار 4"></div>
+                `;
+            } else {
+                area.innerHTML = `
+                    <label class="form-label">الإجابة الصحيحة</label>
+                    <div class="d-flex gap-4">
+                        <label><input type="radio" name="nq-correct-tf" value="true" checked> صح</label>
+                        <label><input type="radio" name="nq-correct-tf" value="false"> خطأ</label>
+                    </div>
+                `;
+            }
+        }
+
+        function confirmAddQuestion() {
+            const text = document.getElementById('nq-text').value;
+            const type = document.getElementById('nq-type').value;
+            const points = parseInt(document.getElementById('nq-points').value) || 1;
+
+            if (!text) { showToast('أدخل نص السؤال', 'error'); return; }
+
+            let question = {
+                question_text: text,
+                question_type: type,
+                points: points
+            };
+
+            if (type === 'mcq') {
+                const optInputs = document.querySelectorAll('.nq-opt');
+                const options = Array.from(optInputs).map(i => i.value);
+                if (options.some(o => !o)) { showToast('أدخل جميع الخيارات', 'error'); return; }
+                
+                const correctIdx = document.querySelector('input[name="nq-correct"]:checked').value;
+                question.options = options;
+                question.correct_answer = options[correctIdx];
+            } else {
+                question.options = ['true', 'false'];
+                question.correct_answer = document.querySelector('input[name="nq-correct-tf"]:checked').value;
+            }
+
+            newHomeworkQuestions.push(question);
+            renderAddedQuestions();
+        }
+
+        function renderAddedQuestions() {
+            const container = document.getElementById('added-questions-list');
+            if (newHomeworkQuestions.length === 0) {
+                container.innerHTML = '<p class="text-secondary text-center">لم تتم إضافة أسئلة بعد</p>';
+                return;
+            }
+
+            container.innerHTML = newHomeworkQuestions.map((q, i) => `
+                <div class="card p-2 mb-2 bg-white">
+                    <div class="d-flex justify-content-between">
+                        <strong>${i+1}. ${q.question_text}</strong>
+                        <button type="button" class="btn btn-sm text-danger" onclick="removeNewQuestion(${i})">❌</button>
+                    </div>
+                    <div class="small text-secondary mt-1">
+                        ${q.question_type === 'mcq' ? 'اختياري' : 'صح/خطأ'} - ${q.points} نقاط
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function removeNewQuestion(index) {
+            newHomeworkQuestions.splice(index, 1);
+            renderAddedQuestions();
+        }
+
+        async function handleCreateHomework() {
+            const form = document.getElementById('homework-form');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            const formData = new FormData(form);
+            const rawData = Object.fromEntries(formData.entries());
+            
+            if (newHomeworkQuestions.length === 0) {
+                showToast('يجب إضافة سؤال واحد على الأقل', 'error');
+                return;
+            }
+
+            if (rawData.unit_id === '') rawData.unit_id = null; // Handle optional unit
+
+            const homeworkData = {
+                title: rawData.title,
+                description: rawData.description,
+                subject_id: rawData.subject_id,
+                unit_id: rawData.unit_id,
+                grade_level: parseInt(rawData.grade_level),
+                is_published: form.querySelector('#is_published').checked,
+                created_by: (await authService.getCurrentUser()).id
+            };
+
+            try {
+                await adminService.createHomework(homeworkData, newHomeworkQuestions);
+                showToast('تم إنشاء الواجب بنجاح', 'success');
+                closeModal(form.closest('.modal-wrapper'));
+                loadHomeworks();
+            } catch (error) {
+                handleError(error, 'handleCreateHomework');
+            }
+        }
+
+        async function deleteHomework(id) {
+            if (await showConfirm({ message: 'هل أنت متأكد من حذف هذا الواجب؟ سيتم حذف جميع الأسئلة المرتبطة به.' })) {
+                try {
+                    await adminService.deleteHomework(id);
+                    showToast('تم حذف الواجب بنجاح', 'success');
+                    loadHomeworks();
+                } catch (error) {
+                    handleError(error, 'deleteHomework');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

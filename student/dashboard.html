@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - منصة الأستاذ عصام</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/student.css">
+</head>
+<body class="bg-secondary">
+    <div class="student-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">الأستاذ عصام</div>
+            <nav class="sidebar-nav">
+                <li class="nav-item"><a href="dashboard.html" class="nav-link active"><span>📊</span> لوحة التحكم</a></li>
+                <li class="nav-item"><a href="lessons.html" class="nav-link"><span>📝</span> دروسي</a></li>
+                <li class="nav-item"><a href="homeworks.html" class="nav-link"><span>🏠</span> الواجبات</a></li>
+                <li class="nav-item"><a href="exams.html" class="nav-link"><span>✍️</span> الاختبارات</a></li>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-danger btn-block" onclick="authService.signOut()">🚪 تسجيل الخروج</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1 id="welcome-msg">مرحباً بك</h1>
+                    <p class="text-secondary" id="grade-label">جاري التحميل...</p>
+                </div>
+            </header>
+
+            <!-- Stats/Overview Section -->
+            <div class="grid grid-3 mb-4">
+                <div class="card p-3 d-flex align-items-center gap-3">
+                    <div style="font-size: 2rem">📚</div>
+                    <div>
+                        <div class="font-bold h4 mb-0" id="count-subjects">-</div>
+                        <div class="text-secondary small">مواد دراسية</div>
+                    </div>
+                </div>
+                <div class="card p-3 d-flex align-items-center gap-3">
+                    <div style="font-size: 2rem">📝</div>
+                    <div>
+                        <div class="font-bold h4 mb-0" id="count-exams">-</div>
+                        <div class="text-secondary small">اختبارات متاحة</div>
+                    </div>
+                </div>
+                <div class="card p-3 d-flex align-items-center gap-3">
+                    <div style="font-size: 2rem">🏆</div>
+                    <div>
+                        <div class="font-bold h4 mb-0" id="avg-score">-</div>
+                        <div class="text-secondary small">متوسط الدرجات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="row">
+                <div class="col-8">
+                    <h3>موادي الدراسية</h3>
+                    <div id="subjects-container" class="grid grid-2 mt-2">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <h3>آخر النتائج</h3>
+                    <div id="results-container" class="mt-2">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/utils/errors.js"></script>
+    <script src="../js/utils/validation.js"></script>
+    <script src="../js/utils/helpers.js"></script>
+    <script src="../js/utils/theme.js"></script>
+    <script src="../js/components/toast.js"></script>
+    <script src="../js/services/auth.service.js"></script>
+    <script src="../js/services/student.service.js"></script>
+
+    <script>
+        async function initDashboard() {
+            try {
+                const user = await authService.requireRole('student', '../login.html');
+                if (!user) return;
+
+                document.getElementById('welcome-msg').textContent = `مرحباً بك، ${user.profile.full_name}`;
+                document.getElementById('grade-label').textContent = `الصف ${user.profile.grade_level}`;
+
+                const subjects = await studentService.getMySubjects();
+                const exams = await studentService.getAvailableExams();
+                
+                renderSubjects(subjects);
+                renderStats(subjects, exams);
+                renderRecentResults(exams);
+            } catch (error) {
+                handleError(error, 'initDashboard');
+            }
+        }
+
+        function renderSubjects(subjects) {
+            const container = document.getElementById('subjects-container');
+            if (subjects.length === 0) {
+                container.innerHTML = '<p class="text-secondary">لا توجد مواد مضافة لهذا الصف حالياً.</p>';
+                return;
+            }
+
+            container.innerHTML = subjects.map(s => `
+                <div class="card subject-card p-3 pointer" onclick="window.location.href='lessons.html?subject=${s.id}'">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h4>${s.name}</h4>
+                        <span>📖</span>
+                    </div>
+                    <p class="text-secondary small mb-2">${s.description || 'تصفح الدروس والملفات'}</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderStats(subjects, exams) {
+            document.getElementById('count-subjects').textContent = subjects.length;
+            document.getElementById('count-exams').textContent = exams.filter(e => !e.is_completed).length;
+            
+            const completed = exams.filter(e => e.is_completed);
+            if (completed.length > 0) {
+                const totalScore = completed.reduce((sum, e) => sum + (e.last_score || 0), 0);
+                const avg = Math.round(totalScore / completed.length);
+                document.getElementById('avg-score').textContent = `${avg}%`;
+            } else {
+                document.getElementById('avg-score').textContent = 'لا يوجد';
+            }
+        }
+
+        function renderRecentResults(exams) {
+            const container = document.getElementById('results-container');
+            const completed = exams.filter(e => e.is_completed).slice(0, 5);
+            
+            if (completed.length === 0) {
+                container.innerHTML = '<div class="card p-3 text-center text-secondary">لا توجد نتائج سابقة.</div>';
+                return;
+            }
+
+            container.innerHTML = completed.map(e => `
+                <div class="card p-3 mb-2 d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="font-bold small">${e.title}</div>
+                        <div class="text-muted" style="font-size: 0.7rem">${new Date(e.created_at).toLocaleDateString('ar-EG')}</div>
+                    </div>
+                    <div class="text-${e.last_score >= e.passing_score ? 'success' : 'error'} font-bold">
+                        ${e.last_score}%
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
